@@ -1,0 +1,13 @@
+Source: dhcpoptinj
+Maintainer: Andreas Misje <amisje@gmail.com>
+Section: net
+Priority: optional
+Homepage: http://github.com/misje/dhcpoptinj
+Build-Depends: debhelper (>=9), libnetfilter-queue-dev (>= 1)
+
+Package: dhcpoptinj
+Architecture: any
+Depends: libnetfilter-queue1
+Description: DHCP option injector
+ dhcpoptinj is a simple utility for injecting DHCP options into DHCP packets.
+ dhcpoptinj is implemented using netfilter-queue.

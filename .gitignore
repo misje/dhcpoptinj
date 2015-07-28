@@ -1,0 +1,9 @@
+.*.sw*
+*.o
+*.depend
+CMakeCache.txt
+CMakeFiles
+*.cmake
+Makefile
+dhcpoptinj
+install_manifest.txt

@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+dpkg-buildpackage -us -uc -b

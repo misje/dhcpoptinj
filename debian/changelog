@@ -1,0 +1,10 @@
+dhcpoptinj (0.2.1-1) unstable; urgency=low
+  * Fix memory leak on exit with --version/--help
+  * Minor documentation updates
+
+ -- Andreas Misje <amisje@gmail.com>  Tue, 28 Jul 2015 23:18:22 +0200
+
+dhcpoptinj (0.2.0-1) unstable; urgency=low
+  * Inital release
+
+ -- Andreas Misje <amisje@gmail.com>  Mon, 27 Jul 2015 09:43:44 +0200
