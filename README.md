@@ -94,8 +94,8 @@ install cmake libnetfilter-queue-dev`.
 1. Run cmake: `cmake ..` (or `cmake -DCMAKE_BUILD_TYPE=Debug ..` if you want a
 	debug build)
 1. Run make: `make -j4`
-1. Install (optional, but you will benefit from having dhcpoptinj in your PATH
-	as well as enjoy bash completion): `sudo make install`
+1. Install (optional, but you will benefit from having dhcpoptinj in your
+	PATH): `sudo make install`
 
 ### Demolish
 
