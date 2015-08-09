@@ -409,7 +409,7 @@ static void writePID()
 				strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	fprintf(f, "%zu", (size_t)pid);
+	fprintf(f, "%ld", (long)pid);
 	fclose(f);
 }
 
