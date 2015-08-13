@@ -518,7 +518,7 @@ static void debugLogPacket(const struct Packet *packet)
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
 	logMessage(LOG_DEBUG, "Inspecting packet from %02X:%02X:%02X:%02X:%02X:%02X to "
-			"%03d.%03d.%03d.%03d …\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+			"%d.%d.%d.%d …\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
 			destIP->o1, destIP->o2, destIP->o3, destIP->o4);
 }
 
