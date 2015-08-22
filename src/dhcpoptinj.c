@@ -63,8 +63,8 @@ static const int maxPacketSize = 2048;
 static const int maxQueueLen = 20;
 static struct Config *config;
 static bool daemonised;
-static volatile sig_atomic_t escapeMainLoop;
-static volatile sig_atomic_t signalCaught;
+static sig_atomic_t escapeMainLoop;
+static sig_atomic_t signalCaught;
 
 static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo, 
 		struct nfq_data *pktData, void *userData);
