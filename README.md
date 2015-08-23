@@ -162,5 +162,5 @@ requests!
 
 ## License
 
-I have chose to use GPL for this project. If that does not suit you, contact
+I have chosen to use GPL for this project. If that does not suit you, contact
 me, and we can agree on a different license.
