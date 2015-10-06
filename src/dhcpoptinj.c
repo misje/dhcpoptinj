@@ -256,7 +256,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	}
 	else
 	{
-		logMessage(LOG_INFO, "Dropping the packet because it is %s\n", findOptResString(res));
+		logMessage(LOG_INFO, "Dropping the packet because %s\n", findOptResString(res));
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
 	}
 }
@@ -462,9 +462,9 @@ static const char *findOptResString(int dhcpOptFindResult)
 	switch (dhcpOptFindResult)
 	{
 		case FindOpt_Incomplete:
-			return "incomplete";
+			return "it is incomplete";
 		case FindOpt_Fragmented:
-			return "fragmented";
+			return "it is fragmented";
 		case FindOpt_OptExists:
 			return "an option to be injected already exists";
 		case FindOpt_Invalid:
