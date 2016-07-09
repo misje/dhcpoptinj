@@ -57,7 +57,7 @@ option](https://tools.ietf.org/html/rfc2132#section-2) (code 0).
 
 The layout of the nonsensical option used in this example (first the [DHCP
 option layout](https://tools.ietf.org/html/rfc2132#section-2), then the
-specific [relay agent information option usb-option
+specific [relay agent information option sub-option
 layout](https://tools.ietf.org/html/rfc3046#section-2.0)) is as follows:
 
 | Code | Length |            Data            |
