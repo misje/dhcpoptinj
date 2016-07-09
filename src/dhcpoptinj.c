@@ -306,7 +306,7 @@ static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSi
 	size_t udpHdrSize = sizeof(struct UDPHeader);
 	size_t headersSize = ipHdrSize + udpHdrSize + sizeof(struct BootP);
 	/* Allocate size for a new packet, slightly larger than needed in order to
-	 * avoid realocation.: */
+	 * avoid reallocation.: */
 	*newDataSize = origDataSize + config->dhcpOptsSize + 1; /* room for padding */
 	/* Ensure that the DHCP packet (the BOOTP header and payload) is at least
 	 * MIN_BOOTP_SIZE bytes long (as per the RFC 1542 requirement): */
