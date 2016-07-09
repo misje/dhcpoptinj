@@ -60,6 +60,7 @@ struct Config *conf_parseOpts(int argc, char **argv)
 		{ "option", required_argument, NULL, 'o' },
 		{ "pid-file", optional_argument, NULL, 'p' },
 		{ "queue", required_argument, NULL, 'q' },
+		{ "remove-existing-opt", no_argument, NULL, 'r' },
 		{ "version", no_argument, NULL, 'v' },
 		{ NULL, 0, NULL, 0 },
 	};
@@ -71,10 +72,11 @@ struct Config *conf_parseOpts(int argc, char **argv)
 	int oFlagCount = 0;
 	int pFlagCount = 0;
 	int qFlagCount = 0;
+	int rFlagCount = 0;
 
 	for (;;)
 	{
-		int opt = getopt_long(argc, argv, "dfhio:p::q:v", options, NULL);
+		int opt = getopt_long(argc, argv, "dfhio:p::q:rv", options, NULL);
 
 		/* Parsing finished: */
 		if (opt == -1)
@@ -141,6 +143,11 @@ struct Config *conf_parseOpts(int argc, char **argv)
 				}
 				break;
 
+			case 'r':
+				++rFlagCount;
+				config->removeExistOpt = true;
+				break;
+
 			case 'v':
 				printVersion(argv[0]);
 				dhcpOpt_destroyList(dhcpOptList);
@@ -155,10 +162,17 @@ struct Config *conf_parseOpts(int argc, char **argv)
 		}
 	}
 
-	if (dFlagCount > 1 || fFlagCount > 1 || fwdOnFailFlagCount > 1 || iFlagCount > 1
-			|| pFlagCount > 1 || qFlagCount > 1)
+	if (
+			dFlagCount > 1 ||
+			fFlagCount > 1 ||
+			fwdOnFailFlagCount > 1 ||
+			iFlagCount > 1 ||
+			pFlagCount > 1 ||
+			qFlagCount > 1 ||
+			rFlagCount > 1
+			)
 	{
-		fputs("More than one option of a kind was provided\n", stderr);
+		fputs("More than one option of a kind (not -o) was provided\n", stderr);
 		printUsage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -177,6 +191,13 @@ struct Config *conf_parseOpts(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if (iFlagCount && rFlagCount)
+	{
+		fputs("Both -i and -r cannot be used at the same time\n", stderr);
+		printUsage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
 	if (argc - optind > 0)
 	{
 		fputs("No non-option arguments expected\n", stderr);
@@ -184,21 +205,23 @@ struct Config *conf_parseOpts(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Add obligatory DHCP end option and serialise options: */
-	if (dhcpOpt_add(dhcpOptList, DHCPOPT_END, NULL, 0) || dhcpOpt_serialise(dhcpOptList, 
-				&config->dhcpOpts, &config->dhcpOptsSize))
+	if (oFlagCount)
 	{
-		fputs("Failed to create DHCP option list\n", stderr);
-		exit(EXIT_FAILURE);
-	}
-	/* Create an array of just the DHCP option codes: */
-	if (dhcpOpt_optCodes(dhcpOptList, &config->dhcpOptCodes, &config->dhcpOptCodeCount))
-	{
-		fputs("Failed to create DHCP option code list\n", stderr);
-		exit(EXIT_FAILURE);
-	}
+		/* Add obligatory DHCP end option and serialise options: */
+		if (dhcpOpt_serialise(dhcpOptList, &config->dhcpOpts, &config->dhcpOptsSize))
+		{
+			fputs("Failed to create DHCP option list\n", stderr);
+			exit(EXIT_FAILURE);
+		}
+		/* Create an array of just the DHCP option codes: */
+		if (dhcpOpt_optCodes(dhcpOptList, &config->dhcpOptCodes, &config->dhcpOptCodeCount))
+		{
+			fputs("Failed to create DHCP option code list\n", stderr);
+			exit(EXIT_FAILURE);
+		}
 
-	dhcpOpt_destroyList(dhcpOptList);
+		dhcpOpt_destroyList(dhcpOptList);
+	}
 
 	return config;
 }
@@ -232,10 +255,15 @@ static void printUsage(const char *programName)
 	int progNameLen = strlen(programName);
 	printf(
 			"%s – DHCP option injector\n"
-         "Usage: %s [-d] [-f] [--forward-on-fail] [-i ] [-p [pid_file]] \n"
+         "Usage: %s [-d] [-f] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
 			"       %*s -q queue_num -o dhcp_option [-o dhcp_option …]\n"
 			"       %s -h | -v\n"
-			, programName, programName, progNameLen, "", programName);
+			,
+			programName,
+			programName,
+			progNameLen, "",
+			programName
+			);
 }
 
 static void printHelp(const char *programName)
@@ -252,12 +280,9 @@ static void printHelp(const char *programName)
 			"                             through. The default behaviour is to drop\n"
 			"                             the packet if options could not be injected\n"
          "  -h, --help                 Print this help text\n"
-			"  -i, --ignore-existing-opt  Do nothing if incoming packet already has\n"
-			"                             a DHCP option that should be injected.\n"
-			"                             The default behaviour is to whine and drop\n"
-			"                             the packet. With this option the processing\n"
-			"                             will continue and the packet will be mangled\n"
-			"                             and accepted\n"
+			"  -i, --ignore-existing-opt  Ignore existing DHCP options, otherwise\n"
+			"                             drop the packet unless --remove-exisiting-opt\n"
+			"                             is also provided\n"
 			"  -o, --option dhcp_option   DHCP option to inject as a hex string,\n"
 			"                             where the first byte indicates the option\n"
 			"                             code. The option length field is automatically\n"
@@ -266,27 +291,24 @@ static void printHelp(const char *programName)
 			"  -p, --pid-file [file]      Write PID to file, using specified path\n"
 			"                             or a default sensible location\n"
 			"  -q, --queue queue_num      Netfilter queue number to use\n"
-         "  -v, --version              Display version\n\n"
-
+			"  -r, --remove-existing-opt  Remove existing DHCP options of the same\n"
+			"                             kind as those to be injected\n"
+         "  -v, --version              Display version\n"
+			"\n"
 			"%s takes a packet from a netfilter queue, ensures that it is a\n"
 			"BOOTP/DHCP request, and injects additional DHCP options before\n"
 			"accepting the packet. The following criteria must be fulfilled for\n"
 			"%s to touch a packet:\n"
 			" - The UDP packet must be BOOTP packet with a DHCP cookie\n"
 			" - The UDP packet cannot be fragmented\n"
-			" - The DHCP option to inject cannot already be present (unless -i is\n"
-			"   specified). Modifying existing options is not supported\n\n"
-
+			"\n"
 			"Packets given to %s's queue are matched against protocol UDP\n"
 			"and port 67/68. The packet is then assumed to be a BOOTP message. If\n"
 			"it has the correct DHCP magic cookie value, its exisiting DHCP\n"
 			"options will be parsed. If the packet is not deemed a valid DHCP\n"
-			"packet, it will be ignored and accepted. If it is a valid DHCP packet, \n"
-			"it cannot be fragmented. If it is, it will be dropped. If the packet\n"
-			"contains any of the DHCP options (matched by code) that are to be\n"
-			"injected, it will be dropped. The lacking support of modifying\n"
-			"exisiting options may be added in a future version.\n\n"
-
+			"packet, it will be ignored and accepted. If it is a valid DHCP packet,\n"
+			"it cannot be fragmented. If it is, it will be dropped.\n"
+			"\n"
 			"All the DHCP options specified with the -o/--option flag will be\n"
 			"added before the terminating option (end option, 255). The packet is\n"
 			"padded if necessary and sent back to netfilter. The IPv4 header\n"
@@ -297,14 +319,28 @@ static void printHelp(const char *programName)
 			"by adding options with code 0 (one option per pad byte). This special\n"
 			"option is the only option that does not have any payload (the end\n"
 			"option, 255, cannot be manually added). Padding individual options\n"
-			"should not be necessary.\n\n"
-
+			"should not be necessary.\n"
+			"\n"
 			"The option hex string is written as a series of two-digit pairs,\n"
 			"optionally delimited by one or more non-hexadecimal characters:\n"
 			"'466A6173','46 6A 61 73', '46:6A:61:73' etc. There is a maximum limit\n"
 			"of 256 bytes per option, excluding the option code (the first byte)\n"
-			"and the automatically inserted length byte\n\n"
-
+			"and the automatically inserted length byte. At least one option must\n"
+			"be provided.\n"
+			"\n"
+			"If the packet already contains a DHCP option that is to be injected\n"
+			"(matched by code), the behaviour depends on the command line options\n"
+			"--ignore-existing-opt and --remove-existing-opt:\n"
+			"   (none)   The packet will be dropped\n"
+			"   -i       The existing options are ignored and the injected options\n"
+			"            are added\n"
+			"   -r       Any existing options are removed and the injected options\n"
+			"            are added.\n"
+			"\n"
+			"Note that injected options will not be injected in the same place as\n"
+			"those that may have been removed if using -r. However, this should not\n"
+			"matter\n"
+			"\n"
 			"This utility allows you to do things that you probably should not do.\n"
 			"Be good and leave packets alone.\n"
          , programName, programName, programName, programName, programName);

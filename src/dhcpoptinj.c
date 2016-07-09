@@ -39,6 +39,8 @@
 #include "udp.h"
 #include "dhcp.h"
 
+#define MIN_BOOTP_SIZE 300
+
 struct Packet
 {
 	struct IPv4Header ipHeader;
@@ -46,14 +48,11 @@ struct Packet
 	struct BootP bootp;
 } __attribute__((packed));
 
-enum DHCPOptFindResult
+enum MangleResult
 {
-	FindOpt_OK,
-	FindOpt_Incomplete,
-	FindOpt_NotDHCP,
-	FindOpt_Fragmented,
-	FindOpt_OptExists,
-	FindOpt_Invalid,
+	Mangle_OK = 0,
+	Mangle_mallocFail,
+	Mangle_optExists,
 };
 
 /* Somewhat arbitrary, feel free to change */
@@ -68,12 +67,13 @@ static sig_atomic_t signalCaught;
 
 static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo, 
 		struct nfq_data *pktData, void *userData);
-/* Find the last DHCP option in packet, the terminating 'end' option, and
- * store its offset from packet start */
-static int findDHCPOptTerm(const uint8_t *data, size_t size, size_t *termOptOffset);
+static bool packetIsComplete(const uint8_t *data, size_t size);
+static bool packetIsDHCP(const uint8_t *data);
 /* Inject DHCP options into DHCP packet */
-static int manglePacket(const struct Packet *origPacket, struct Packet **newPacket, 
-		size_t *newPacketSize, size_t termOptOffset);
+static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSize,
+		uint8_t **newData, size_t *newDataSize);
+static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataSize,
+		uint8_t *newData, size_t *newDataSize);
 /* Write a message to syslog or standard stream, depending on whether the
  * process is run as a daemon or not */
 static void logMessage(int priority, const char *format, ...);
@@ -84,15 +84,13 @@ static void destroyConfig();
 static void initSignalHandler();
 static void setEscapeMainLoopFlag(int signal);
 static void initLog(const char *programName);
-/* Convert enum DHCPOptFindResult to string */
-static const char *findOptResString(int dhcpOptFindResult);
 /* Debug-print all options to inject */
 static void debugLogOptions();
 /* Very simple check of the provided option codes, warning user if something
  * looks incorrect */
 static void inspectOptions();
 /* Debug-print packet header */
-static void debugLogPacket(const struct Packet *packet);
+static void debugLogPacketHeader(const uint8_t *data);
 /* Debug-print packet's existing DHCP options */
 static void debugLogOption(const struct DHCPOption *option);
 
@@ -229,138 +227,235 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	}
 
 	struct nfqnl_msg_packet_hdr *metaHeader = nfq_get_msg_packet_hdr(pktData);
-	size_t termOptPos = 0;
-	enum DHCPOptFindResult res = findDHCPOptTerm(packet, size, &termOptPos);
-	if (res == FindOpt_NotDHCP)
+	if (!packetIsComplete(packet, size))
+	{
+		logMessage(LOG_INFO, "Dropping the packet because it is incomplete\n");
+		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
+	}
+	if (!packetIsDHCP(packet))
 	{
 		logMessage(LOG_DEBUG, "Ignoring non-DHCP packet\n");
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 0, NULL);
 	}
-	else if (res == FindOpt_OK)
+	/* We do not have the logic needed to support fragmented packets: */
+	if (ipv4_packetFragmented(&((const struct Packet *)packet)->ipHeader))
 	{
-		struct Packet *mangledPacket = NULL;
-		size_t mangledPacketSize = 0;
-		if (manglePacket((const struct Packet *)packet, &mangledPacket, 
-					&mangledPacketSize, termOptPos))
-		{
-			logMessage(LOG_WARNING, "Failed to allocate memory for mangled packet\n");
-			uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
-			return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), verdict, 0, NULL);
-		}
-
-		int res = nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 
-				mangledPacketSize, (uint8_t *)mangledPacket);
-		free(mangledPacket);
-		logMessage(LOG_INFO, "Mangling packet\n");
-		return res;
-	}
-	else
-	{
-		logMessage(LOG_INFO, "Dropping the packet because %s\n", findOptResString(res));
+		logMessage(LOG_INFO, "Dropping the packet because it is fragmented\n");
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
 	}
+	if (config->debug)
+		debugLogPacketHeader(packet);
+
+	logMessage(LOG_INFO, "Mangling packet\n");
+
+	uint8_t *mangledData = NULL;
+	size_t mangledDataSize = 0;
+	enum MangleResult result = manglePacket(packet, size, &mangledData, &mangledDataSize);
+	if (result == Mangle_mallocFail)
+	{
+		logMessage(LOG_WARNING, "Failed to allocate memory for mangled packet\n");
+		uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
+		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), verdict, 0, NULL);
+	}
+	else if (result == Mangle_optExists)
+	{
+		logMessage(LOG_INFO, "Dropping the packet because option already exists\n");
+		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
+	}
+
+	int res = nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 
+			mangledDataSize, mangledData);
+	free(mangledData);
+	return res;
 }
 
-static int findDHCPOptTerm(const uint8_t *data, size_t size, size_t *termOptOffset)
+static bool packetIsComplete(const uint8_t *data, size_t size)
 {
 	if (size < sizeof(struct IPv4Header))
-		return FindOpt_Incomplete;
+		return false;
 
 	const struct Packet *packet = (const struct Packet *)data;
+	return packet->ipHeader.totalLen >= sizeof(*packet);
+}
 
-	if (packet->ipHeader.totalLen < sizeof(*packet))
-		return FindOpt_Incomplete;
+static bool packetIsDHCP(const uint8_t *data)
+{
+	const struct Packet *packet = (const struct Packet *)data;
+
 	if (packet->ipHeader.protocol != IPPROTO_UDP)
-		return FindOpt_NotDHCP;
+		return false;
 
 	uint16_t destPort = ntohs(packet->udpHeader.destPort);
 	if (!(destPort == 67 || destPort == 68))
-		return FindOpt_NotDHCP;
+		return false;
 	if (packet->udpHeader.length < sizeof(struct UDPHeader) + sizeof(struct BootP))
-		return FindOpt_NotDHCP;
+		return false;
 
 	const struct BootP *dhcp = &packet->bootp;
 	if (ntohl(dhcp->cookie) != DHCP_MAGIC_COOKIE)
-		return FindOpt_NotDHCP;
+		return false;
 
-	/* We do not have the logic needed to support fragmented packets: */
-	if (ipv4_packetFragmented(&packet->ipHeader))
-		return FindOpt_Fragmented;
-
-	if (config->debug)
-		debugLogPacket(packet);
-
-	/* Start with position of the first DHCP option: */
-	size_t offset = sizeof(*packet);
-	while (offset < size)
-	{
-		const struct DHCPOption *option = (const struct DHCPOption *)(data + offset);
-		if (option->code == DHCPOPT_PAD)
-		{
-			offset += 1;
-			continue;
-		}
-		else if (option->code == DHCPOPT_END)
-		{
-			*termOptOffset = (const uint8_t *)option - data;
-			return FindOpt_OK;
-		}
-		else if (config->debug)
-			debugLogOption(option);
-
-		offset += sizeof(struct DHCPOption) + option->length;
-
-		if (!config->ignoreExistOpt)
-			for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
-				if (option->code == config->dhcpOptCodes[i])
-					return FindOpt_OptExists;
-	}
-
-	return FindOpt_Invalid;
+	return true;
 }
 
-static int manglePacket(const struct Packet *origPacket, struct Packet **newPacket, 
-		size_t *newPacketSize, size_t termOptOffset)
+static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSize,
+		uint8_t **newData, size_t *newDataSize)
 {
+	const struct Packet *origPacket = (const struct Packet *)origData;
 	size_t ipHdrSize = ipv4_headerLen(&origPacket->ipHeader);
 	size_t udpHdrSize = sizeof(struct UDPHeader);
-	size_t newPayloadSize = termOptOffset - ipHdrSize - udpHdrSize + config->dhcpOptsSize;
-	size_t padding = (2 - (newPayloadSize % 2)) % 2;
-	size_t newTotalSize = ipHdrSize + udpHdrSize + newPayloadSize + padding;
+	size_t headersSize = ipHdrSize + udpHdrSize + sizeof(struct BootP);
+	/* Allocate size for a new packet, slightly larger than needed in order to
+	 * avoid realocation.: */
+	*newDataSize = origDataSize + config->dhcpOptsSize + 1; /* room for padding */
+	/* Ensure that the DHCP packet (the BOOTP header and payload) is at least
+	 * MIN_BOOTP_SIZE bytes long (as per the RFC 1542 requirement): */
+	if (*newDataSize - ipHdrSize - udpHdrSize < MIN_BOOTP_SIZE)
+		*newDataSize = MIN_BOOTP_SIZE - ipHdrSize - udpHdrSize;
 
-	/* Ensure that the DHCP packet (exluding IP header) is at least 300 bytes
-	 * long: */
-	if (newTotalSize - ipHdrSize < 300)
+	*newData = malloc(*newDataSize);
+	if (!*newData)
+		return Mangle_mallocFail;
+
+	/* Copy 'static' data (everything but the DHCP options) from original
+	 * packet: */
+	memcpy(*newData, origPacket, headersSize);
+	enum MangleResult result = mangleOptions(origData, origDataSize, *newData, 
+			newDataSize);
+	if (result != Mangle_OK)
 	{
-		size_t extraPadding = 300 - (newTotalSize - ipHdrSize);
-		padding += extraPadding;
-		newTotalSize += extraPadding;
+		free(*newData);
+		return result;
 	}
-	*newPacketSize = newTotalSize;
-	*newPacket = malloc(newTotalSize);
-	if (!newPacket)
-		return 1;
 
-	memcpy(*newPacket, origPacket, termOptOffset);
+	size_t newPayloadSize = *newDataSize - ipHdrSize - udpHdrSize;
+	size_t padding = (2 - (newPayloadSize % 2)) % 2;
+	if (newPayloadSize < MIN_BOOTP_SIZE)
+		padding = MIN_BOOTP_SIZE - newPayloadSize;
 
-	struct IPv4Header *ipHeader = &(*newPacket)->ipHeader;
-	ipHeader->totalLen = htons(newTotalSize);
+	newPayloadSize += padding;
+	*newDataSize = ipHdrSize + udpHdrSize + newPayloadSize;
+
+	struct Packet *newPacket = (struct Packet *)*newData;
+	struct IPv4Header *ipHeader = &newPacket->ipHeader;
+	ipHeader->totalLen = htons(*newDataSize);
 	ipHeader->checksum = 0;
 	ipHeader->checksum = ipv4_checksum(ipHeader);
 
-	struct UDPHeader *udpHeader = &(*newPacket)->udpHeader;
-	udpHeader->length = htons(udpHdrSize + newPayloadSize + padding);
+	struct UDPHeader *udpHeader = &newPacket->udpHeader;
+	udpHeader->length = htons(udpHdrSize + newPayloadSize);
 	udpHeader->checksum = 0;
+
+	if (padding && config->debug)
+		logMessage(LOG_DEBUG, "Padding with %zu byte(s) to meet minimal BOOTP payload "
+				"size …\n", padding);
+
+	/* Pad to (at least) MIN_BOOTP_SIZE bytes: */
+	for (size_t i = *newDataSize - padding; i < *newDataSize; ++i)
+		(*newData)[i] = DHCPOPT_PAD;
+
+	return Mangle_OK;
+}
+
+static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataSize,
+		uint8_t *newData, size_t *newDataSize)
+{
+	/* Start with position of the first DHCP option: */
+	size_t origOffset = offsetof(struct Packet, bootp) + sizeof(struct BootP);
+	size_t newOffset = origOffset;
+	size_t padCount = 0;
+	while (origOffset < origDataSize)
+	{
+		const struct DHCPOption *option = (const struct DHCPOption *)(origData + origOffset);
+		size_t optSize =
+			option->code == DHCPOPT_PAD || option->code == DHCPOPT_END ? 1
+			: sizeof(struct DHCPOption) + option->length;
+
+		if (config->debug)
+		{
+			if (option->code == DHCPOPT_PAD)
+				++padCount;
+			else
+			{
+				if (padCount)
+					logMessage(LOG_DEBUG, "Found %zu PAD options (removing)\n", padCount);
+				else
+					debugLogOption(option);
+
+				padCount = 0;
+			}
+		}
+
+		if (option->code == DHCPOPT_PAD)
+		{
+		}
+		if (option->code == DHCPOPT_END)
+			break;
+		/* If existing options are to be ignored and not removed, just copy
+		 * them: */
+		else if (config->ignoreExistOpt && !config->removeExistOpt)
+		{
+			if (config->debug)
+				logMessage(LOG_DEBUG, " (copying)\n");
+
+			memcpy(newData + newOffset, option, optSize);
+			newOffset += optSize;
+		}
+		/* Otherwise we need to check whether one of the injected options are
+		 * already present: */
+		else
+		{
+			bool optFound = false;
+			if (option->code != DHCPOPT_END)
+				for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
+					if (option->code == config->dhcpOptCodes[i])
+					{
+						optFound = true;
+						break;
+					}
+
+			/* If the option already exists in original payload, but is not to be
+			 * removed, and ignore command line option is not provided, drop
+			 * packet: */
+			if (optFound && !config->removeExistOpt && !config->ignoreExistOpt)
+			{
+				if (config->debug)
+					logMessage(LOG_DEBUG, " (conflict)\n");
+
+				return Mangle_optExists;
+			}
+			/* Copy option if it is not to be removed: */
+			else if ((optFound && !config->removeExistOpt) || !optFound)
+			{
+				if (config->debug)
+					logMessage(LOG_DEBUG, " (copying)\n");
+
+				memcpy(newData + newOffset, option, optSize);
+				newOffset += optSize;
+			}
+			else if (config->debug)
+				logMessage(LOG_DEBUG, " (removing)\n");
+		}
+		origOffset += optSize;
+	}
+
+	if (config->debug)
+		logMessage(LOG_DEBUG, "Injecting %zu option(s) …\n", config->dhcpOptCodeCount);
 
 	/* Inject DHCP options: */
 	for (size_t i = 0; i < config->dhcpOptsSize; ++i)
-		((uint8_t *)*newPacket)[termOptOffset + i] = config->dhcpOpts[i];
+		newData[newOffset + i] = config->dhcpOpts[i];
 
-	/* Pad to (at least) 300 bytes: */
-	for (size_t i = 1; i <= padding; ++i)
-		((uint8_t *)*newPacket)[newTotalSize - i] = 0;
+	newOffset += config->dhcpOptsSize;
 
-	return 0;
+	if (config->debug)
+		logMessage(LOG_DEBUG, "Inserting END option …\n");
+
+	/* Finally insert the END option: */
+	newData[newOffset++] = DHCPOPT_END;
+	/* Update (reduce) packet size: */
+	*newDataSize = newOffset;
+	return Mangle_OK;
 }
 
 static void logMessage(int priority, const char *format, ...)
@@ -457,23 +552,6 @@ static void initLog(const char *programName)
 		setlogmask(LOG_UPTO(LOG_INFO));
 }
 
-static const char *findOptResString(int dhcpOptFindResult)
-{
-	switch (dhcpOptFindResult)
-	{
-		case FindOpt_Incomplete:
-			return "it is incomplete";
-		case FindOpt_Fragmented:
-			return "it is fragmented";
-		case FindOpt_OptExists:
-			return "an option to be injected already exists";
-		case FindOpt_Invalid:
-			return "the packet is malformed";
-		default:
-			return "??";
-	}
-}
-
 static void debugLogOptions()
 {
 	if (!config->debug)
@@ -504,8 +582,9 @@ static void inspectOptions()
 		logMessage(LOG_WARNING, "Warning: Only padding options added\n");
 }
 
-static void debugLogPacket(const struct Packet *packet)
+static void debugLogPacketHeader(const uint8_t *data)
 {
+	const struct Packet *packet = (const struct Packet *)data;
 	const uint8_t *mac = packet->bootp.clientHwAddr;
 	struct IPAddr
 	{
@@ -518,14 +597,21 @@ static void debugLogPacket(const struct Packet *packet)
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
 	logMessage(LOG_DEBUG, "Inspecting packet from %02X:%02X:%02X:%02X:%02X:%02X to "
-			"%d.%d.%d.%d …\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-			destIP->o1, destIP->o2, destIP->o3, destIP->o4);
+			"%d.%d.%d.%d …\n",
+			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+			destIP->o1, destIP->o2, destIP->o3, destIP->o4
+			);
 }
 
 static void debugLogOption(const struct DHCPOption *option)
 {
-	if (option->code == DHCPOPT_TYPE && option->length == 1)
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) (DHCP message type): %s\n",
+	if (option->code == DHCPOPT_PAD)
+		return;
+	else if (option->code == DHCPOPT_END)
+		logMessage(LOG_DEBUG,"Found END option %s\n", config->dhcpOptCodeCount ?
+				"(removing)" : "(copying)");
+	else if (option->code == DHCPOPT_TYPE && option->length == 1)
+		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) (DHCP message type): %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
 	{
@@ -540,7 +626,7 @@ static void debugLogOption(const struct DHCPOption *option)
 		if (i)
 			optPayload[3*i - 1] = '\0';
 
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with payload %s\n",
+		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with payload %s",
 				option->code, option->code, optPayload);
 	}
 }

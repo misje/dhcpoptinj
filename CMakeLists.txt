@@ -13,7 +13,7 @@ else()
 	set(CMAKE_INSTALL_PREFIX /usr CACHE STRING "Choose install prefix")
 endif()
 
-project(dhcpoptinj LANGUAGES C VERSION 0.2.1)
+project(dhcpoptinj LANGUAGES C VERSION 0.3.0)
 add_definitions(-DDHCPOPTINJ_VERSION="${PROJECT_VERSION}")
 set(SOURCES
 	src/config.c
