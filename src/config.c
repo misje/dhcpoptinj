@@ -394,12 +394,6 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 					string);
 			exit(EXIT_FAILURE);
 		}
-		if (dhcpOpt_optExists(list, optCode))
-		{
-			fprintf(stderr, "DHCP option of type %hhu (0x%02hhX) already specified\n",
-					optCode, optCode);
-			exit(EXIT_FAILURE);
-		}
 	}
 
 	if (dhcpOpt_add(list, optCode, buffer + 1, length - 1))
