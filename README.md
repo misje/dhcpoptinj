@@ -82,7 +82,7 @@ dhcoptinj is quite a simple program and should be unproblematic to build.
 You need [cmake](http://www.cmake.org/) and
 [libnetfilter\_queue](http://www.netfilter.org/projects/libnetfilter_queue/)
 (and a C compiler that supports C99). Hopefully, you are using a Debian-like
-system, in which case you can run the following to install them: `sudo aptitude
+system, in which case you can run the following to install them: `sudo apt-get
 install cmake libnetfilter-queue-dev`.
 
 ### Build
