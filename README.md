@@ -117,9 +117,11 @@ For bugs and suggestions please create an issue.
 ### Limitations
 
 dhcpoptinj is simple and will hopefully stay that way. Nonetheless, the
-following are missing features that are soon to be added:
+following are missing features that hopefully will be added some day:
 
-1. Allow modifying existing options
+1. Remove options instead of having to replace them
+2. Filter incoming packets by their DHCP message type (code 53) before mangling
+	them
 
 ### Troubleshooting
 
