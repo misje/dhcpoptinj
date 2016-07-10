@@ -271,6 +271,23 @@ static void printHelp(const char *programName)
 	printUsage(programName);
 	printf(
 			"\n"
+			"%s takes a packet from a netfilter queue, ensures that it is a\n"
+			"BOOTP/DHCP request, and injects additional DHCP options before\n"
+			"accepting the packet. The following criteria must be fulfilled for\n"
+			"%s to touch a packet:\n"
+			" - The UDP packet must be BOOTP packet with a DHCP cookie\n"
+			" - The UDP packet must not be fragmented\n"
+			"\n"
+			"Packets given to %s's queue are matched against protocol UDP\n"
+			"and port 67/68. The packet is then assumed to be a BOOTP message. If\n"
+			"it has the correct DHCP magic cookie value, %s will proceed to\n"
+			"inject new options (removing existing options if requested). If the\n"
+			"packet is not deemed a valid DHCP packet, it will be ignored and accepted.\n"
+			"If it is a valid DHCP packet it cannot be fragmented. If it is, it will\n"
+			"be dropped.\n"
+			"\n"
+			"Options:\n"
+			"\n"
          "  -d, --debug                Make %s tell you as much as possible\n"
          "                             about what it does and tries to do\n"
          "  -f, --foreground           Prevent %s from running in the\n"
@@ -280,9 +297,10 @@ static void printHelp(const char *programName)
 			"                             through. The default behaviour is to drop\n"
 			"                             the packet if options could not be injected\n"
          "  -h, --help                 Print this help text\n"
-			"  -i, --ignore-existing-opt  Ignore existing DHCP options, otherwise\n"
-			"                             drop the packet unless --remove-exisiting-opt\n"
-			"                             is also provided\n"
+			"  -i, --ignore-existing-opt  Proceed if an injected options already exists\n"
+			"                             in the original packet. Unless\n"
+			"                             --remove-exisiting-opt is provided, the\n"
+			"                             default behaviour is to drop the packet\n"
 			"  -o, --option dhcp_option   DHCP option to inject as a hex string,\n"
 			"                             where the first byte indicates the option\n"
 			"                             code. The option length field is automatically\n"
@@ -295,20 +313,6 @@ static void printHelp(const char *programName)
 			"                             kind as those to be injected\n"
          "  -v, --version              Display version\n"
 			"\n"
-			"%s takes a packet from a netfilter queue, ensures that it is a\n"
-			"BOOTP/DHCP request, and injects additional DHCP options before\n"
-			"accepting the packet. The following criteria must be fulfilled for\n"
-			"%s to touch a packet:\n"
-			" - The UDP packet must be BOOTP packet with a DHCP cookie\n"
-			" - The UDP packet cannot be fragmented\n"
-			"\n"
-			"Packets given to %s's queue are matched against protocol UDP\n"
-			"and port 67/68. The packet is then assumed to be a BOOTP message. If\n"
-			"it has the correct DHCP magic cookie value, its exisiting DHCP\n"
-			"options will be parsed. If the packet is not deemed a valid DHCP\n"
-			"packet, it will be ignored and accepted. If it is a valid DHCP packet,\n"
-			"it cannot be fragmented. If it is, it will be dropped.\n"
-			"\n"
 			"All the DHCP options specified with the -o/--option flag will be\n"
 			"added before the terminating option (end option, 255). The packet is\n"
 			"padded if necessary and sent back to netfilter. The IPv4 header\n"
@@ -316,7 +320,7 @@ static void printHelp(const char *programName)
 			"None of the added options are checked for whether they are valid, or\n"
 			"whether the option codes are valid. Options are currently not\n"
 			"(automatically) padded individually, but they can be manually padded\n"
-			"by adding options with code 0 (one option per pad byte). This special\n"
+			"by adding options with code 0 (one pad byte per option). This special\n"
 			"option is the only option that does not have any payload (the end\n"
 			"option, 255, cannot be manually added). Padding individual options\n"
 			"should not be necessary.\n"
@@ -339,11 +343,17 @@ static void printHelp(const char *programName)
 			"\n"
 			"Note that injected options will not be injected in the same place as\n"
 			"those that may have been removed if using -r. However, this should not\n"
-			"matter\n"
+			"matter.\n"
 			"\n"
 			"This utility allows you to do things that you probably should not do.\n"
 			"Be good and leave packets alone.\n"
-         , programName, programName, programName, programName, programName);
+         ,
+		programName,
+		programName,
+		programName,
+		programName,
+		programName,
+		programName);
 }
 
 static void printVersion(const char *programName)
