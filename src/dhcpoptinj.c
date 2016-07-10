@@ -562,9 +562,10 @@ static void debugLogOptions()
 
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
 	{
+		uint8_t code = config->dhcpOptCodes[i];
 		bool atEnd = i == config->dhcpOptCodeCount - 1;
 		const char *delim = atEnd ? "\n" : ", ";
-		logMessage(LOG_DEBUG, "%u%s", config->dhcpOptCodes[i], delim);
+		logMessage(LOG_DEBUG, "0x%X (%u)%s", code, code, delim);
 	}
 }
 
