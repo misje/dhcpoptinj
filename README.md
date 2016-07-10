@@ -25,7 +25,7 @@ You need an iptables rule in order to intercept packets and send them to
 dhcpoptinj. Let us say you have two interfaces bridged together, *eth0* and
 *eth1*. Let us say you want to intercept all BOOTP requests coming from *eth0*
 and inject the [relay agent information
-option](https://tools.ietf.org/html/rfc3046) (82). Let us make up a silly
+option](https://tools.ietf.org/html/rfc3046) (82/0x52). Let us make up a silly
 payload: An [agent circuit ID
 sub-option](https://tools.ietf.org/html/rfc3046#section-3.1) with the value
 "Fjas".
@@ -62,7 +62,7 @@ layout](https://tools.ietf.org/html/rfc3046#section-2.0)) is as follows:
 
 | Code | Length |            Data            |
 |------|--------|----------------------------|
-|  82  | (auto) | 01 04 46 6A 61 73 ("Fjas") |
+|  52  | (auto) | 01 04 46 6A 61 73 ("Fjas") |
 
 | Sub-opt. | Length |         Data         |
 |----------|--------|----------------------|
