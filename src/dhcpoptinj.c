@@ -308,10 +308,11 @@ static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSi
 	/* Allocate size for a new packet, slightly larger than needed in order to
 	 * avoid reallocation.: */
 	*newDataSize = origDataSize + config->dhcpOptsSize + 1; /* room for padding */
+	size_t newPayloadSize = *newDataSize - ipHdrSize - udpHdrSize;
 	/* Ensure that the DHCP packet (the BOOTP header and payload) is at least
 	 * MIN_BOOTP_SIZE bytes long (as per the RFC 1542 requirement): */
-	if (*newDataSize - ipHdrSize - udpHdrSize < MIN_BOOTP_SIZE)
-		*newDataSize = MIN_BOOTP_SIZE - ipHdrSize - udpHdrSize;
+	if (newPayloadSize < MIN_BOOTP_SIZE)
+		*newDataSize += MIN_BOOTP_SIZE - newPayloadSize;
 
 	*newData = malloc(*newDataSize);
 	if (!*newData)
@@ -328,7 +329,11 @@ static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSi
 		return result;
 	}
 
-	size_t newPayloadSize = *newDataSize - ipHdrSize - udpHdrSize;
+	/* Recalculate actual size (and potential padding) after mangling options
+	 * (the initially calculated size is possibly slightly too large, since it
+	 * could not forsee how many bytes of DHCP options that was going to be
+	 * removed; however, the header size fields need to be correct): */
+	newPayloadSize = *newDataSize - ipHdrSize - udpHdrSize;
 	size_t padding = (2 - (newPayloadSize % 2)) % 2;
 	if (newPayloadSize < MIN_BOOTP_SIZE)
 		padding = MIN_BOOTP_SIZE - newPayloadSize;
