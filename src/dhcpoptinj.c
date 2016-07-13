@@ -627,7 +627,7 @@ static void debugLogOption(const struct DHCPOption *option)
 		if (i)
 			optPayload[3*i - 1] = '\0';
 
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with payload %s",
-				option->code, option->code, optPayload);
+		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with %' '3u-byte payload %s",
+				option->code, option->code, option->length, optPayload);
 	}
 }
