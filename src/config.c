@@ -135,7 +135,7 @@ struct Config *conf_parseOpts(int argc, char **argv)
 
 			case 'q':
 				++qFlagCount;
-				if (parseQueueNum(optarg, &config->queue))
+				if (!optarg || parseQueueNum(optarg, &config->queue))
 				{
 					fprintf(stderr, "Invalid queue number: %s\n", optarg);
 					printUsage(argv[0]);
@@ -374,6 +374,9 @@ static int parseQueueNum(const char *string, uint16_t *queueNum)
 
 static void addDHCPOption(struct DHCPOptList *list, const char *string)
 {
+	if (!string)
+		return;
+
 	/* Make room for length byte and payload */
 	uint8_t buffer[1 + 256];
 	uint16_t length = 0;
