@@ -399,9 +399,8 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 			{
 				if (padCount)
 					logMessage(LOG_DEBUG, "Found %zu PAD options (removing)\n", padCount);
-				else
-					debugLogOption(option);
 
+				debugLogOption(option);
 				padCount = 0;
 			}
 		}
