@@ -581,7 +581,7 @@ static void debugLogOptions()
 		uint8_t code = config->dhcpOptCodes[i];
 		bool atEnd = i == config->dhcpOptCodeCount - 1;
 		const char *delim = atEnd ? "\n" : ", ";
-		logMessage(LOG_DEBUG, "0x%X (%u)%s", code, code, delim);
+		logMessage(LOG_DEBUG, "0x%02X (%u)%s", code, code, delim);
 	}
 }
 
