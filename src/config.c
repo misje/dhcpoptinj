@@ -390,6 +390,9 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 		else
 			++i;
 	}
+	if (!length)
+		return;
+
 	uint16_t optCode = buffer[0];
 
 	if (optCode == DHCPOPT_END)
