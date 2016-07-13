@@ -90,7 +90,7 @@ static void debugLogOptions();
  * looks incorrect */
 static void inspectOptions();
 /* Debug-print packet header */
-static void debugLogPacketHeader(const uint8_t *data);
+static void debugLogPacketHeader(const uint8_t *data, size_t size);
 /* Debug-print packet's existing DHCP options */
 static void debugLogOption(const struct DHCPOption *option);
 
@@ -244,7 +244,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
 	}
 	if (config->debug)
-		debugLogPacketHeader(packet);
+		debugLogPacketHeader(packet, size);
 
 	logMessage(LOG_INFO, "Mangling packet\n");
 
@@ -262,6 +262,9 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 		logMessage(LOG_INFO, "Dropping the packet because option already exists\n");
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
 	}
+
+	if (config->debug)
+		logMessage(LOG_DEBUG, "Sending mangled packet …\n");
 
 	int res = nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 
 			mangledDataSize, mangledData);
@@ -588,7 +591,7 @@ static void inspectOptions()
 		logMessage(LOG_WARNING, "Warning: Only padding options added\n");
 }
 
-static void debugLogPacketHeader(const uint8_t *data)
+static void debugLogPacketHeader(const uint8_t *data, size_t size)
 {
 	const struct Packet *packet = (const struct Packet *)data;
 	const uint8_t *mac = packet->bootp.clientHwAddr;
@@ -602,8 +605,9 @@ static void debugLogPacketHeader(const uint8_t *data)
 
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
-	logMessage(LOG_DEBUG, "Inspecting packet from %02X:%02X:%02X:%02X:%02X:%02X to "
-			"%d.%d.%d.%d …\n",
+	logMessage(LOG_DEBUG, "Inspecting %zu-byte DHCP packet from "
+			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d …\n",
+			size,
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
 			destIP->o1, destIP->o2, destIP->o3, destIP->o4
 			);
