@@ -262,6 +262,13 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 		logMessage(LOG_INFO, "Dropping the packet because option already exists\n");
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
 	}
+	else if (result != Mangle_OK)
+	{
+		logMessage(LOG_ERR, "Internal error: unexpected return value from manglePacket(): %d\n",
+				result);
+		uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
+		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), verdict, 0, NULL);
+	}
 
 	if (config->debug)
 		logMessage(LOG_DEBUG, "Sending mangled packet …\n");
