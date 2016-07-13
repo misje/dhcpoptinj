@@ -240,8 +240,13 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	/* We do not have the logic needed to support fragmented packets: */
 	if (ipv4_packetFragmented(&((const struct Packet *)packet)->ipHeader))
 	{
-		logMessage(LOG_INFO, "Dropping the packet because it is fragmented\n");
-		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
+		uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
+		if (config->fwdOnFail)
+			logMessage(LOG_INFO, "Ingoring fragmented packet\n");
+		else
+			logMessage(LOG_INFO, "Dropping the packet because it is fragmented\n");
+		
+		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), verdict, 0, NULL);
 	}
 	if (config->debug)
 		debugLogPacketHeader(packet, size);
