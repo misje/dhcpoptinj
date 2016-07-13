@@ -48,8 +48,8 @@ struct Config
 	 */
 	bool ignoreExistOpt;
 	bool removeExistOpt;
-	/* If option injection should fail, forward/accept packet instead of dropping it
-	 * */
+	/* If option injection should fail, forward/accept packet instead of
+	 * dropping it */
 	bool fwdOnFail;
 };
 
