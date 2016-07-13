@@ -405,9 +405,6 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 			}
 		}
 
-		if (option->code == DHCPOPT_PAD)
-		{
-		}
 		if (option->code == DHCPOPT_END)
 			break;
 		/* If existing options are to be ignored and not removed, just copy
