@@ -8,10 +8,11 @@ come, **dhcpoptinj** will (hopefully) help you.
 
 There can be many a reason to mangle DHCP requests, although chances are you
 ought to look for a much better method for solving your problem. Perhaps you do
-not have access to the DHCP server/clients, perhaps the DHCP software is
-difficult to configure, or perhaps you only want to experiment sending exotic
-or malformed options? There is a small chance that dhcoptinj might actually be
-of some use.
+not have access to the DHCP server/clients and need to modify their DHCP
+options, perhaps the DHCP software is difficult to configure (or does not
+support what you want to do), perhaps you have a very complex and/or odd setup,
+or perhaps you just want to experiment sending exotic or malformed options?
+There is a small chance that dhcoptinj might actually be of some use.
 
 ## How
 
@@ -45,7 +46,8 @@ accomplish this.
 Now send a DHCP packet to the *eth0* interface and watch it (using a tool like
 [wireshark](https://www.wireshark.org/)) having been modified when it reaches
 the bridged interface. It should have the injected option at the end of the
-option list.
+option list. If you capture the incoming DHCP packet with Wireshark, it will
+appear unmodified although it will in fact be mangled.
 
 Note the format of the argument to the *-o* option: It should be a hexadecimal
 string starting with the DHCP option code followed by the option payload. The
@@ -158,9 +160,13 @@ be useful:
 
 ## Contributing
 
-I really do not expect anyone to need or use this utility, thus I do not expect
-anyone to contribute. However, by all means fork the project and leave pull
-requests!
+If you have any suggestions please leave an issue, and I will come back to you.
+You are welcome to contribute and pull requests are much appreciated.
+
+If you find dhcpoptinj useful I would love to hear what you are using it for.
+Update the [wiki
+page](https://github.com/misje/dhcpoptinj/wiki#practical-use-cases) and
+describe your use.
 
 ## License
 
