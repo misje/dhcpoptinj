@@ -4,6 +4,7 @@ dhcpoptinj (0.3.0-1) unstable; urgency=low
   * Fix incorrect --version output
   * Update README
   * Minor debug output improvements
+  * Minor bug fixes
 
  -- Andreas Misje <amisje@gmail.com>  Sun, 10 Jul 2016 08:59:36 +0100
 
