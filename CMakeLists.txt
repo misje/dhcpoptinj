@@ -13,7 +13,7 @@ else()
 	set(CMAKE_INSTALL_PREFIX /usr CACHE STRING "Choose install prefix")
 endif()
 
-project(dhcpoptinj LANGUAGES C VERSION 0.2.0)
+project(dhcpoptinj LANGUAGES C VERSION 0.3.0)
 add_definitions(-DDHCPOPTINJ_VERSION="${PROJECT_VERSION}")
 set(SOURCES
 	src/config.c
@@ -30,7 +30,7 @@ set(HEADERS
 	src/udp.h
 	)
 add_executable(dhcpoptinj ${SOURCES} ${HEADERS})
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -std=c99 -D_POSIX_SOURCE -D_DEFAULT_SOURCE")
 find_library(NFQ_LIB netfilter_queue REQUIRED)
 target_link_libraries(dhcpoptinj ${NFQ_LIB})
 install(TARGETS dhcpoptinj DESTINATION sbin)

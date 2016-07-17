@@ -87,6 +87,9 @@ int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t siz
 int dhcpOpt_serialise(const struct DHCPOptList *list, uint8_t **buffer, size_t *size)
 {
 	*size = totalSize(list);
+	if (!*size)
+		return 1;
+
 	*buffer = malloc(*size);
 	if (!*buffer)
 	{

@@ -22,6 +22,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 struct Config
 {
@@ -41,10 +42,14 @@ struct Config
 	uint8_t *dhcpOptCodes;
 	/* Size of DHCP option code array */
 	size_t dhcpOptCodeCount;
-	/* Do not drop packets with DHCP options to inject already present */
+	/* (none):              Whine and drop packet
+	 * ignore:              Ignore existing options and add new options
+	 * remove:              Remove all exisiting options and add new options
+	 */
 	bool ignoreExistOpt;
-	/* If option injection should fail, forward/accept packet instead of dropping it
-	 * */
+	bool removeExistOpt;
+	/* If option injection should fail, forward/accept packet instead of
+	 * dropping it */
 	bool fwdOnFail;
 };
 
