@@ -297,7 +297,7 @@ static void printHelp(const char *programName)
 			"                             through. The default behaviour is to drop\n"
 			"                             the packet if options could not be injected\n"
          "  -h, --help                 Print this help text\n"
-			"  -i, --ignore-existing-opt  Proceed if an injected options already exists\n"
+			"  -i, --ignore-existing-opt  Proceed if an injected option already exists\n"
 			"                             in the original packet. Unless\n"
 			"                             --remove-exisiting-opt is provided, the\n"
 			"                             default behaviour is to drop the packet\n"
