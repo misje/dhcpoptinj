@@ -501,8 +501,10 @@ static void logMessage(int priority, const char *format, ...)
 
 static void simplifyProgramName(char *programName)
 {
-	size_t strLen = strlen(programName);
-	memmove(programName, basename(programName), strLen + 1);
+	char *simplifiedName = basename(programName);
+	size_t len = strlen(simplifiedName);
+	memmove(programName, simplifiedName, len);
+	programName[len] = '\0';
 }
 
 static void writePID()
