@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (nfq_set_queue_maxlen(queue, 20) < 0)
+	if (nfq_set_queue_maxlen(queue, maxQueueLen) < 0)
 	{
 		logMessage(LOG_ERR, "Failed to set netfilter queue length: %s\n", strerror(
 					errno));
