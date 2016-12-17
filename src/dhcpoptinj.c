@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (nfq_set_queue_maxlen(queue, 20) < 0)
+	if (nfq_set_queue_maxlen(queue, maxQueueLen) < 0)
 	{
 		logMessage(LOG_ERR, "Failed to set netfilter queue length: %s\n", strerror(
 					errno));
@@ -501,8 +501,10 @@ static void logMessage(int priority, const char *format, ...)
 
 static void simplifyProgramName(char *programName)
 {
-	size_t strLen = strlen(programName);
-	memmove(programName, basename(programName), strLen + 1);
+	char *simplifiedName = basename(programName);
+	size_t len = strlen(simplifiedName);
+	memmove(programName, simplifiedName, len);
+	programName[len] = '\0';
 }
 
 static void writePID()
