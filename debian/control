@@ -3,7 +3,7 @@ Maintainer: Andreas Misje <amisje@gmail.com>
 Section: net
 Priority: optional
 Standards-Version: 3.9.8
-Homepage: http://github.com/misje/dhcpoptinj
+Homepage: https://github.com/misje/dhcpoptinj
 Vcs-Git: git://github.com/misje/dhcpoptinj
 Build-Depends: debhelper (>= 9~), libnetfilter-queue-dev (>= 1)
 
