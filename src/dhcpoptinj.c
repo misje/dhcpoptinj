@@ -242,7 +242,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	{
 		uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
 		if (config->fwdOnFail)
-			logMessage(LOG_INFO, "Ingoring fragmented packet\n");
+			logMessage(LOG_INFO, "Ignoring fragmented packet\n");
 		else
 			logMessage(LOG_INFO, "Dropping the packet because it is fragmented\n");
 		
