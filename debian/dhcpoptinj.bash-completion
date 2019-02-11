@@ -6,18 +6,15 @@ _dhcpoptinj()
    _init_completion -s || return
 
    case $prev in
-	   -h|--help|-v|--version)
-		   return
-		   ;;
+       -h|--help|-v|--version)
+           return
+           ;;
    esac
 
    if [[ "$cur" == -* ]]; then
-	   # This helper script only manages to fetch long options (it does not
-	   # seem to like dhcpoptinj's help text format), but we can live with
-	   # that:
-	   COMPREPLY=( $(compgen -W '$(_parse_help "$1")' -- "$cur") )
-	   [[ $COMPREPLY == *= ]] && compopt -o nospace
-	   return 0
+       COMPREPLY=( $(compgen -W '$(_parse_help "$1")' -- "$cur") )
+       [[ $COMPREPLY == *= ]] && compopt -o nospace
+       return 0
    fi
 } && complete -F _dhcpoptinj dhcpoptinj
       

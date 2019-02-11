@@ -1,3 +1,11 @@
+dhcpoptinj (0.4.1-2) unstable; urgency=medium
+  * Update debian/control
+  * Add copyright file
+  * Bash completion for both long and short options
+  * Add man page
+
+ -- Andreas Misje <amisje@gmail.com>  Thu, 17 Jan 2019 08:45:35 +0100
+
 dhcpoptinj (0.4.1-1) unstable; urgency=low
   * Update version number in --version output
 

@@ -71,8 +71,8 @@ layout](https://tools.ietf.org/html/rfc3046#section-2.0)) is as follows:
 |    01    |   4    | 46 6A 61 73 ("Fjas") |
 
 Note that dhcpoptinj does not care about what you write in the option payloads,
-neither does it check whether your option code exists. It does however forbid
-you to use the option code 255 (the terminating end option). dhcpoptinj inserts
+nor does it check whether your option code exists. It does however forbid you
+to use the option code 255 (the terminating end option). dhcpoptinj inserts
 this option as the last option automatically.
 
 ## Installing

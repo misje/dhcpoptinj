@@ -1,0 +1,222 @@
+'\" t
+.\"
+.\" Copyright © 2019 Andreas Misje
+.\"
+.\" This file is part of dhcpoptinj.
+.\"
+.\" dhcpoptinj is free software: you can redistribute it and/or modify it under
+.\" the terms of the GNU General Public License as published by the Free
+.\" Software Foundation, either version 3 of the License, or (at your option)
+.\" any later version.
+.\"
+.\" dhcpoptinj is distributed in the hope that it will be useful, but WITHOUT
+.\" ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+.\" FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+.\" more details.
+.\"
+.\" You should have received a copy of the GNU General Public License along
+.\" with dhcpoptinj. If not, see <http://www.gnu.org/licenses/>.
+.\"
+.
+.Dd February 10, 2019
+.Dt DHCPOPTINJ 1 fjas
+.Os
+.Sh NAME
+.Nm dhcpoptinj
+.Nd DHCP option injector, a tool to manipulate DHCP packet options
+.Sh SYNOPSIS
+.Nm
+.Bk
+.Op Fl df
+.Ek
+.Bk
+.Op Fl Fl forward-on-fail
+.Ek
+.Bk
+.Op Fl i Ns | Ns Fl r
+.Ek
+.Bk
+.Op Fl p Op Ar pid_file
+.Ek
+.Bk
+.Fl q Ar queue_num
+.Ek
+.Bk
+.Fl o Ar dhcp_option
+.Ek
+.Bk
+.Op Po Fl o Ar dhcp_option Pc ...
+.Ek
+.Bk
+.Nm
+.Fl h Ns | Ns Fl v
+.Ek
+.Sh DESCRIPTION
+.Nm
+is a fairly simple tool for manipulating DHCP options in a BOOTP/DHCP packet.
+It relies on netfilter queue and nftables/iptables rules, in which you specify what packets to send to
+.Nm .
+.Nm
+waits for packets to arrive in a netfilter queue.
+It will ensure that a packet is in fact a BOOTP/DHCP packet, and if so proceed to inject or replace options.
+It will recalculate the IPv4 header checksum, disable the UDP checksum (for a simpler implementation) and then give the packet back to netfilter.
+.Pp
+Based on the options
+.Fl Fl ignore-existing-opt
+and
+.Fl Fl remove-existing-opt
+.Nm
+may be configured to replace matching options or leave them in place.
+.Fl Fl forward-on-fail
+can be used to accept the packet (leaving it unaltered) if the package mangling should fail for any reason.
+.Ss Invocation
+.Nm
+incorrectly requires flags to run.
+The netfilter queue number
+.Pq Fl Fl queue
+is necessary, and also at least one DHCP option
+.Pq Fl Fl option .
+See
+.Sx EXAMPLES .
+.Ss Argument list processing
+.Nm
+is invoked only with options and no arguments:
+.Bl -tag -width ".Fl r, .Fl .Fl remove-existing-opt" -offset indent
+.It Fl d , Fl Fl debug
+Make
+.Nm
+tell you as much as possible about what it does and tries to do.
+.It Fl f , Fl Fl foreground
+Prevent
+.Nm
+from running in the background.
+.It "\ \ \ " Fl Fl forward-on-fail
+If the process of injecting options should fail, let the unaltered DHCP packet pass through.
+The default behaviour is to drop the packet if options could not be injected.
+.It Fl h , Fl Fl help
+Print a help text.
+.It Fl i , Fl Fl ignore-existing-opt
+Proceed if an injected option already exists in the original packet.
+Unless
+.Fl Fl remove-existing-opt
+is provided, the default behaviour is to drop the packet.
+.It Fl o , Fl Fl option Ar dhcp_option
+DHCP option to inject as a hex string, where the first byte indicates the option code.
+The option length field is automatically calculated and must be omitted.
+Several options may be injected.
+.Pp
+The hex string may be delimited by non-hexadecimal characters for readability.
+The following hex strings all produce the same result: '01 02 03', '01:02:03', '010203', '01 <-> 02 <-> 03'.
+Remember to quote these arguments if they contains spaces or other characters that have special meaning to your shell.
+.It Fl p , Fl Fl pid-file Op Pa pid_file
+Write PID to file, using specified path or a default sensible location.
+.It Fl q , Fl Fl queue Ar queue_num
+The netfilter queue number to use
+.It Fl r , Fl Fl remove-existing-opt
+Remove existing DHCP options of the same kind as those to be injected.
+.It Fl v , Fl Fl version
+Display version.
+.El
+.Pp
+.Ss DHCP options
+All the DHCP options specified with the
+.Fl o Ns / Ns Fl Fl option
+flag will be added before the terminating option (end option, 255).
+The packet is padded if necessary and sent back to netfilter.
+The IPv4 header checksum is recalculated, but the UDP checksum is set to 0 (disabled).
+None of the added options are checked for whether they are valid, or whether the option codes are valid.
+Options are currently not (automatically) padded individually, but they can be manually padded by adding options with code 0 (one pad byte per option).
+This special option is the only option that does not have any payload (the end option, 255, is inserted automatically and cannot be manually added).
+Padding individual options should not be necessary.
+.Pp
+The option hex string is written as a series of two-digit pairs,
+optionally delimited by one or more non-hexadecimal characters: '466A6173','46 6A 61 73', '46:6A:61:73' etc.
+There is a maximum limit of 256 bytes per option, excluding the option code (the first byte) and the automatically inserted length byte.
+At least one option must be provided.
+.Pp
+If the packet already contains a DHCP option that is to be injected (matched by code), the behaviour depends on the command line options
+.Fl Fl ignore-existing-opt
+and
+.Fl Fl remove-existing-opt :
+.Bl -tag -width ".Pq none" -offset indent
+.It Pq none
+The packet will be dropped.
+.It Fl i
+The existing options are ignored and the injected options are added.
+.It Fl r
+Any existing options are removed and the injected options are added.
+.El
+.Pp
+.Em Note
+that injected options will not be injected in the same place as those that may have been removed if using
+.Fl r .
+However, this should not matter.
+.Sh EXIT STATUS
+.Ex -std dhcpoptinj
+.Sh EXAMPLES
+Let us say you have two interfaces bridged together, eth0 and eth1.
+Let us say you want to intercept all BOOTP requests coming from eth0 and inject the relay agent information option (82/0x52).
+Let us make up a silly payload: An agent circuit ID sub-option with the value "Fjas".
+.Pp
+Add a rule to the iptables mangle table:
+.Pp
+.Dl sudo iptables -t mangle -A PREROUTING -m physdev --physdev-in eth0 -p udp --dport 67 -j NFQUEUE --queue-num 42
+.Pp
+Then run
+.Nm
+(let us run it in the foreground with extra debug output):
+.Pp
+.Dl sudo dhcpoptinj -d -f -q 42 -o'52 01 04 46 6A 61 73'
+.Pp
+.Em Note
+that
+.Nm
+must be run by a user with the CAP_NET_ADMIN capability.
+You do not need to, and you really should not run
+.Nm
+as root.
+Instead, you can for instance grant the CAP_NET_ADMIN capability to the binary (using
+.Em setcap )
+and limit execution rights to only a specific user or group.
+This is a method used for running Wireshark as non-root, so you will find several guides helping you accomplish this.
+.Pp
+Now send a DHCP packet to the eth0 interface and watch it (using a tool like Wireshark
+.Pq Lk https://\:www.wireshark.org/
+having been modified when it reaches the bridged interface.
+It should have the injected option at the end of the option list.
+If you capture the incoming DHCP packet with Wireshark, it will appear unmodified although it will in fact be mangled.
+.Pp
+Note the format of the argument to the
+.Fl o
+option: It should be a hexadecimal string starting with the DHCP option code followed by the option payload.
+The option length (the byte that normally follows the option code) is automatically calculated and must not be specified.
+The hex string can be delimited by non-hexadecimal characters for readability.
+All options must have a payload, except for the special pad option
+.Pq Lk https://\:tools.ietf.org/\:html/\:rfc2132#section-2
+(code 0).
+.Pp
+The layout of the nonsensical option used in this example, 52 01 04 46 6A 61 73, (first the DHCP option layout
+.Pq Lk https://\:tools.ietf.org/\:html/\:rfc2132#section-2 ,
+then the specific relay agent information option sub-option layout
+.Pq Lk https://tools.ietf.org/html/rfc3046#section-2.0 )
+is as follows:
+.Pp
+.TS
+allbox tab(;);
+c c c
+c c c.
+Code;Length;Data
+52;(auto);01 04 46 6A 61 73 ("Fjas")
+.TE
+.Pp
+.TS
+allbox tab(;);
+c c c
+c c c.
+Sub-opt.;Lenth;Data
+01;4;46 6A 61 73 ("Fjas")
+.TE
+.Sh SEE ALSO
+iptables(8), nftables(8)
+.Sh AUTHORS
+.An "Andreas Misje" Aq amisje@gmail.com
