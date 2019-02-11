@@ -255,9 +255,9 @@ static void printUsage(const char *programName)
 	int progNameLen = strlen(programName);
 	printf(
 			"%s – DHCP option injector\n"
-         "Usage: %s [-d] [-f] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
-			"       %*s -q queue_num -o dhcp_option [-o dhcp_option] …\n"
-			"       %s -h | -v\n"
+         "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
+			"       %*s -q queue_num -o dhcp_option [(-o dhcp_option) …]\n"
+			"       %s -h|-v\n"
 			,
 			programName,
 			programName,
