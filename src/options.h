@@ -31,7 +31,7 @@
 
 struct DHCPOptList;
 
-struct DHCPOptList *dhcpOpt_createList();
+struct DHCPOptList *dhcpOpt_createList(void);
 void dhcpOpt_destroyList(struct DHCPOptList *list);
 bool dhcpOpt_optExists(const struct DHCPOptList *list, int code);
 int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t size);

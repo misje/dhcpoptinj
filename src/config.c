@@ -29,7 +29,7 @@
 
 static const char defaultPIDFilePath[] = "/var/run/dhcpoptinj.pid";
 
-static struct Config *createDefaultConfig();
+static struct Config *createDefaultConfig(void);
 static void printUsage(const char *programName);
 static void printHelp(const char *programName);
 static void printVersion(const char *programName);
@@ -237,7 +237,7 @@ void conf_destroy(struct Config *config)
 	free(config);
 }
 
-static struct Config *createDefaultConfig()
+static struct Config *createDefaultConfig(void)
 {
 	struct Config *config = malloc(sizeof(*config));
 	if (!config)
@@ -379,7 +379,7 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 
 	/* Make room for length byte and payload */
 	uint8_t buffer[1 + 256];
-	uint16_t length = 0;
+	size_t length = 0;
 	for (size_t i = 0; i < strlen(string) && length < sizeof(buffer);)
 	{
 		if (isxdigit(string[i]) && sscanf(&string[i], "%2hhx", &buffer[length]) == 1)

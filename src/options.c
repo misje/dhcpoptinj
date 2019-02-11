@@ -42,7 +42,7 @@ static int resizeList(struct DHCPOptList *list);
 /* Total number of bytes needed to serialise list */
 static size_t totalSize(const struct DHCPOptList *list);
 
-struct DHCPOptList *dhcpOpt_createList()
+struct DHCPOptList *dhcpOpt_createList(void)
 {
 	struct DHCPOptList *list = malloc(sizeof(*list));
 	*list = (struct DHCPOptList){0};
@@ -160,7 +160,7 @@ static size_t totalSize(const struct DHCPOptList *list)
 		if (opt->code == DHCPOPT_PAD || opt->code == DHCPOPT_END)
 			++size;
 		else
-			size += 2 + list->options[i].length;
+			size += 2U + list->options[i].length;
 	}
 
 	return size;
