@@ -4,6 +4,8 @@ dhcpoptinj (0.4.2-1) unstable; urgency=medium
   * Bash completion for both long and short options
   * Add man page
   * Update usage string
+  * Fix compiler warnings (pedantic signed/unsigned issues and void function
+    declarations)
 
  -- Andreas Misje <amisje@gmail.com>  Thu, 17 Jan 2019 08:45:35 +0100
 
