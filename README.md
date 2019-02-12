@@ -99,6 +99,13 @@ install cmake libnetfilter-queue-dev`.
 1. Install (optional, but you will benefit from having dhcpoptinj in your
 	PATH): `sudo make install`
 
+The makefile does not install the man page (doc/dhcpoptinj.8) nor the bash
+completion file (debian/dhcpoptinj.bash-completion). Debhelper does such a good
+job of making sure that these files are installed correctly, making sure the
+completions work instantly and that the man-db is updated. I have no intention
+of duplicating this installation logic, so please use the deb package if you
+want these extra files.
+
 ### Demolish
 
 1. Run `sudo make uninstall` from your build directory
