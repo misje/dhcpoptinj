@@ -78,17 +78,17 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
  * process is run as a daemon or not */
 static void logMessage(int priority, const char *format, ...);
 static void simplifyProgramName(char *programName);
-static void writePID();
-static void removePIDFile();
-static void destroyConfig();
-static void initSignalHandler();
+static void writePID(void);
+static void removePIDFile(void);
+static void destroyConfig(void);
+static void initSignalHandler(void);
 static void setEscapeMainLoopFlag(int signal);
 static void initLog(const char *programName);
 /* Debug-print all options to inject */
-static void debugLogOptions();
+static void debugLogOptions(void);
 /* Very simple check of the provided option codes, warning user if something
  * looks incorrect */
-static void inspectOptions();
+static void inspectOptions(void);
 /* Debug-print packet header */
 static void debugLogPacketHeader(const uint8_t *data, size_t size);
 /* Debug-print packet's existing DHCP options */
@@ -227,7 +227,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	}
 
 	struct nfqnl_msg_packet_hdr *metaHeader = nfq_get_msg_packet_hdr(pktData);
-	if (!packetIsComplete(packet, size))
+	if (!packetIsComplete(packet, (size_t)size))
 	{
 		logMessage(LOG_INFO, "Dropping the packet because it is incomplete\n");
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_DROP, 0, NULL);
@@ -242,20 +242,21 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	{
 		uint32_t verdict = config->fwdOnFail ? NF_ACCEPT : NF_DROP;
 		if (config->fwdOnFail)
-			logMessage(LOG_INFO, "Ingoring fragmented packet\n");
+			logMessage(LOG_INFO, "Ignoring fragmented packet\n");
 		else
 			logMessage(LOG_INFO, "Dropping the packet because it is fragmented\n");
 		
 		return nfq_set_verdict(queue, ntohl(metaHeader->packet_id), verdict, 0, NULL);
 	}
 	if (config->debug)
-		debugLogPacketHeader(packet, size);
+		debugLogPacketHeader(packet, (size_t)size);
 
 	logMessage(LOG_INFO, "Mangling packet\n");
 
 	uint8_t *mangledData = NULL;
 	size_t mangledDataSize = 0;
-	enum MangleResult result = manglePacket(packet, size, &mangledData, &mangledDataSize);
+	enum MangleResult result = manglePacket(packet, (size_t)size, &mangledData,
+			&mangledDataSize);
 	if (result == Mangle_mallocFail)
 	{
 		logMessage(LOG_WARNING, "Failed to allocate memory for mangled packet\n");
@@ -507,7 +508,7 @@ static void simplifyProgramName(char *programName)
 	programName[len] = '\0';
 }
 
-static void writePID()
+static void writePID(void)
 {
 	if (!config->pidFile)
 		return;
@@ -526,7 +527,7 @@ static void writePID()
 	fclose(f);
 }
 
-static void removePIDFile()
+static void removePIDFile(void)
 {
 	if (config->pidFile)
 	{
@@ -535,12 +536,12 @@ static void removePIDFile()
 	}
 }
 
-static void destroyConfig()
+static void destroyConfig(void)
 {
 	conf_destroy(config);
 }
 
-static void initSignalHandler()
+static void initSignalHandler(void)
 {
 	logMessage(LOG_DEBUG, "Initialising signal handler …\n");
 
@@ -570,7 +571,7 @@ static void initLog(const char *programName)
 		setlogmask(LOG_UPTO(LOG_INFO));
 }
 
-static void debugLogOptions()
+static void debugLogOptions(void)
 {
 	if (!config->debug)
 		return;
@@ -587,7 +588,7 @@ static void debugLogOptions()
 	}
 }
 
-static void inspectOptions()
+static void inspectOptions(void)
 {
 	size_t nonSpecialOptCount = 0;
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)

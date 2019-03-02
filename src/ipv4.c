@@ -44,7 +44,7 @@ uint16_t ipv4_checksum(const struct IPv4Header *ipv4Header)
 
 size_t ipv4_headerLen(const struct IPv4Header *ipHeader)
 {
-	return (ipHeader->verIHL & 0xf) * 4;
+	return (ipHeader->verIHL & 0xf) * 4U;
 }
 
 bool ipv4_packetFragmented(const struct IPv4Header *ipHeader)

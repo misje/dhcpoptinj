@@ -5,3 +5,5 @@ dhcpoptinj.prerm.debhelper
 dhcpoptinj.substvars
 files
 debhelper-build-stamp
+.debhelper
+dhcpoptinj

@@ -13,7 +13,7 @@ else()
 	set(CMAKE_INSTALL_PREFIX /usr CACHE STRING "Choose install prefix")
 endif()
 
-project(dhcpoptinj LANGUAGES C VERSION 0.4.1)
+project(dhcpoptinj LANGUAGES C VERSION 0.4.2)
 add_definitions(-DDHCPOPTINJ_VERSION="${PROJECT_VERSION}")
 set(SOURCES
 	src/config.c
@@ -30,7 +30,9 @@ set(HEADERS
 	src/udp.h
 	)
 add_executable(dhcpoptinj ${SOURCES} ${HEADERS})
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -std=c99 -D_POSIX_SOURCE -D_DEFAULT_SOURCE")
+set_property(TARGET dhcpoptinj PROPERTY C_STANDARD 99)
+target_compile_options(dhcpoptinj PRIVATE  -Wall -Wextra -pedantic -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wredundant-decls -Wshadow -Wsign-conversion -Wstrict-overflow=5 -Wswitch-default -Wundef -Werror -Wno-unused -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition -fstack-protector -Wwrite-strings -D_POSIX_SOURCE -D_DEFAULT_SOURCE -D_FORTIFY_SOURCE=2)
+ 
 find_library(NFQ_LIB netfilter_queue REQUIRED)
 target_link_libraries(dhcpoptinj ${NFQ_LIB})
 install(TARGETS dhcpoptinj DESTINATION sbin)

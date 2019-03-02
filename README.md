@@ -71,8 +71,8 @@ layout](https://tools.ietf.org/html/rfc3046#section-2.0)) is as follows:
 |    01    |   4    | 46 6A 61 73 ("Fjas") |
 
 Note that dhcpoptinj does not care about what you write in the option payloads,
-neither does it check whether your option code exists. It does however forbid
-you to use the option code 255 (the terminating end option). dhcpoptinj inserts
+nor does it check whether your option code exists. It does however forbid you
+to use the option code 255 (the terminating end option). dhcpoptinj inserts
 this option as the last option automatically.
 
 ## Installing
@@ -98,6 +98,13 @@ install cmake libnetfilter-queue-dev`.
 1. Run make: `make -j4`
 1. Install (optional, but you will benefit from having dhcpoptinj in your
 	PATH): `sudo make install`
+
+The makefile does not install the man page (doc/dhcpoptinj.8) nor the bash
+completion file (debian/dhcpoptinj.bash-completion). Debhelper does such a good
+job of making sure that these files are installed correctly, making sure the
+completions work instantly and that the man-db is updated. I have no intention
+of duplicating this installation logic, so please use the deb package if you
+want these extra files.
 
 ### Demolish
 
