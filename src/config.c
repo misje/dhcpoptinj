@@ -112,9 +112,12 @@ struct Config *conf_parseOpts(int argc, char **argv)
 				break;
 				
 			case 'p':
-				++pFlagCount;
 				if (pFlagCount > 1)
+				{
+					++pFlagCount;
 					break;
+				}
+				++pFlagCount;
 				{
 					const char *src = optarg ? optarg : defaultPIDFilePath;
 					size_t pidFilePathLen = strlen(src);
