@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#pragma pack(2)
 struct IPv4Header
 {
 	uint8_t verIHL;
@@ -36,7 +37,8 @@ struct IPv4Header
 	uint16_t checksum;
 	uint32_t sourceAddr;
 	uint32_t destAddr;
-} __attribute__((packed));
+};
+#pragma pack()
 
 uint16_t ipv4_checksum(const struct IPv4Header *ipv4Header);
 size_t ipv4_headerLen(const struct IPv4Header *ipv4Header);

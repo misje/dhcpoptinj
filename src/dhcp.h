@@ -27,6 +27,7 @@
 #define DHCPOPT_END 0xff
 #define DHCPOPT_TYPE 0x35
 
+#pragma pack(4)
 struct BootP
 {
 	uint8_t op;
@@ -45,14 +46,15 @@ struct BootP
 	uint8_t file[128];
 	uint32_t cookie;
 	// options …
-} __attribute__((packed));
+};
 
 struct DHCPOption
 {
 	uint8_t code;
 	uint8_t length;
 	uint8_t data[];
-} __attribute__((packed));
+};
+#pragma pack()
 
 const char *dhcp_msgTypeString(uint8_t msgType);
 
