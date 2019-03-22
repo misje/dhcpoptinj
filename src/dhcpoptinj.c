@@ -56,10 +56,10 @@ enum MangleResult
 };
 
 /* Somewhat arbitrary, feel free to change */
-static const int maxPacketSize = 2048;
+static const uint32_t maxPacketSize = 2048;
 /* The netfilter queue length 20 is also arbitrary. Hopefully it is
  * sufficient. */
-static const int maxQueueLen = 20;
+static const uint32_t maxQueueLen = 20;
 static struct Config *config;
 static bool daemonised;
 static sig_atomic_t escapeMainLoop;
