@@ -634,7 +634,7 @@ static void debugLogOption(const struct DHCPOption *option)
 		logMessage(LOG_DEBUG,"Found END option %s\n", config->dhcpOptCodeCount ?
 				"(removing)" : "(copying)");
 	else if (option->code == DHCPOPT_TYPE && option->length == 1)
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) (DHCP message type): %s",
+		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type):       %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
 	{
@@ -649,7 +649,16 @@ static void debugLogOption(const struct DHCPOption *option)
 		if (i)
 			optPayload[3*i - 1] = '\0';
 
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with %' '3u-byte payload %s",
-				option->code, option->code, option->length, optPayload);
+		const char *optName = dhcp_optionString(option->code);
+		size_t optNameLen = strlen(optName);
+		const size_t alignedWidth = 24;
+		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (%s)%*s with %' '3u-byte payload %s",
+				option->code,
+				option->code,
+				optName,
+				optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
+				"",
+				option->length,
+				optPayload);
 	}
 }
