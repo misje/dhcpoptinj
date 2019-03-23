@@ -93,7 +93,9 @@ static void inspectOptions(void);
 /* Debug-print packet header */
 static void debugLogPacketHeader(const uint8_t *data, size_t size);
 /* Debug-print packet's existing DHCP options */
-static void debugLogOption(const struct DHCPOption *option);
+static void debugLogOptionFound(const struct DHCPOption *option);
+static void debugLogOption(const char *action, const struct DHCPOption *option);
+static void debugLogInjectedOptions(void);
 
 int main(int argc, char *argv[])
 {
@@ -403,7 +405,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 				if (padCount)
 					logMessage(LOG_DEBUG, "Found %zu PAD options (removing)\n", padCount);
 
-				debugLogOption(option);
+				debugLogOptionFound(option);
 				padCount = 0;
 			}
 		}
@@ -459,7 +461,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	}
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Injecting %zu option(s)\n", config->dhcpOptCodeCount);
+		debugLogInjectedOptions();
 
 	/* Inject DHCP options: */
 	for (size_t i = 0; i < config->dhcpOptsSize; ++i)
@@ -627,7 +629,7 @@ static void debugLogPacketHeader(const uint8_t *data, size_t size)
 			);
 }
 
-static void debugLogOption(const struct DHCPOption *option)
+static void debugLogOptionFound(const struct DHCPOption *option)
 {
 	if (option->code == DHCPOPT_PAD)
 		return;
@@ -638,28 +640,44 @@ static void debugLogOption(const struct DHCPOption *option)
 		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type):       %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
+		debugLogOption("Found", option);
+}
+
+static void debugLogOption(const char *action, const struct DHCPOption *option)
+{
+	/* String buffer for hex string (maximum DHCP option length (256) times
+	 * three characters (two digits and a space)) */
+	char optPayload[256 * 3];
+	size_t i = 0;
+	for (; i < option->length; ++i)
+		sprintf(optPayload + 3*i, "%02X ", option->data[i]);
+
+	/* Remove last space: */
+	if (i)
+		optPayload[3*i - 1] = '\0';
+
+	const char *optName = dhcp_optionString(option->code);
+	size_t optNameLen = strlen(optName);
+	const size_t alignedWidth = 24;
+	logMessage(LOG_DEBUG, "%s option %' '3hhu (0x%02hhX) (%s)%*s with %' '3u-byte payload %s",
+			action,
+			option->code,
+			option->code,
+			optName,
+			optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
+			"",
+			option->length,
+			optPayload);
+}
+
+static void debugLogInjectedOptions(void)
+{
+	for (size_t offset = 0; offset < config->dhcpOptsSize;)
 	{
-		/* String buffer for hex string (maximum DHCP option length (256) times
-		 * three characters (two digits and a space)) */
-		char optPayload[256 * 3];
-		size_t i = 0;
-		for (; i < option->length; ++i)
-			sprintf(optPayload + 3*i, "%02X ", option->data[i]);
-
-		/* Remove last space: */
-		if (i)
-			optPayload[3*i - 1] = '\0';
-
-		const char *optName = dhcp_optionString(option->code);
-		size_t optNameLen = strlen(optName);
-		const size_t alignedWidth = 24;
-		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (%s)%*s with %' '3u-byte payload %s",
-				option->code,
-				option->code,
-				optName,
-				optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
-				"",
-				option->length,
-				optPayload);
+		const struct DHCPOption *option = (const struct DHCPOption *)(&config->dhcpOpts[offset]);
+		debugLogOption("Injecting", option);
+		logMessage(LOG_DEBUG, "%s", "\n");
+		offset += option->code == DHCPOPT_PAD || option->code == DHCPOPT_END ? 1
+			: sizeof(struct DHCPOption) + option->length;
 	}
 }
