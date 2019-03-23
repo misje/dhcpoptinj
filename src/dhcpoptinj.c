@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 	debugLogOptions();
 	inspectOptions();
 
-	logMessage(LOG_DEBUG, "Initialising netfilter queue ...\n");
+	logMessage(LOG_DEBUG, "Initialising netfilter queue\n");
 
 	struct nfq_handle *nfq = nfq_open();
 	if (!nfq)
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 
 	if (!config->foreground)
 	{
-		logMessage(LOG_DEBUG, "Daemonising ...\n");
+		logMessage(LOG_DEBUG, "Daemonising\n");
 		if (daemon(false, false))
 		{
 			logMessage(LOG_ERR, "Failed to daemonise: daemon() failed: %s\n", 
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 
 	if (config->debug)
 		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to "
-				"mangle on queue %" PRIu16 " ...\n", config->queue);
+				"mangle on queue %" PRIu16 "\n", config->queue);
 	else
 		logMessage(LOG_INFO, "Started\n");
 
@@ -199,14 +199,14 @@ int main(int argc, char *argv[])
 		logMessage(LOG_NOTICE, "Caught signal %s\n", signalName);
 	}
 
-	logMessage(LOG_DEBUG, "Destroying netfilter queue ...\n");
+	logMessage(LOG_DEBUG, "Destroying netfilter queue\n");
 	nfq_destroy_queue(queue);
 
 	/* According to libnetfilter_queue's nfqnl_test.c example, nfq_unbind_pf(…)
 	 * should NOT be called during clean up. */
 	nfq_close(nfq);
 
-	logMessage(LOG_NOTICE, "Exiting ...\n");
+	logMessage(LOG_NOTICE, "Exiting\n");
 	removePIDFile();
 	destroyConfig();
 
@@ -279,7 +279,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	}
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Sending mangled packet ...\n");
+		logMessage(LOG_DEBUG, "Sending mangled packet\n");
 
 	int res = nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 
 			mangledDataSize, mangledData);
@@ -371,7 +371,7 @@ static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSi
 
 	if (padding && config->debug)
 		logMessage(LOG_DEBUG, "Padding with %zu byte(s) to meet minimal BOOTP payload "
-				"size ...\n", padding);
+				"size\n", padding);
 
 	/* Pad to (at least) MIN_BOOTP_SIZE bytes: */
 	for (size_t i = *newDataSize - padding; i < *newDataSize; ++i)
@@ -459,7 +459,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	}
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Injecting %zu option(s) ...\n", config->dhcpOptCodeCount);
+		logMessage(LOG_DEBUG, "Injecting %zu option(s)\n", config->dhcpOptCodeCount);
 
 	/* Inject DHCP options: */
 	for (size_t i = 0; i < config->dhcpOptsSize; ++i)
@@ -468,7 +468,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	newOffset += config->dhcpOptsSize;
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Inserting END option ...\n");
+		logMessage(LOG_DEBUG, "Inserting END option\n");
 
 	/* Finally insert the END option: */
 	newData[newOffset++] = DHCPOPT_END;
@@ -516,7 +516,7 @@ static void writePID(void)
 		return;
 
 	pid_t pid = getpid();
-	logMessage(LOG_DEBUG, "Writing PID %ld to %s ...\n", (long)pid, config->pidFile);
+	logMessage(LOG_DEBUG, "Writing PID %ld to %s\n", (long)pid, config->pidFile);
 
 	FILE *f = fopen(config->pidFile, "w");
 	if (!f)
@@ -533,7 +533,7 @@ static void removePIDFile(void)
 {
 	if (config->pidFile)
 	{
-		logMessage(LOG_DEBUG, "Removing PID file %s ...\n", config->pidFile);
+		logMessage(LOG_DEBUG, "Removing PID file %s\n", config->pidFile);
 		unlink(config->pidFile);
 	}
 }
@@ -545,7 +545,7 @@ static void destroyConfig(void)
 
 static void initSignalHandler(void)
 {
-	logMessage(LOG_DEBUG, "Initialising signal handler ...\n");
+	logMessage(LOG_DEBUG, "Initialising signal handler\n");
 
 	struct sigaction sigAction = { .sa_handler = &setEscapeMainLoopFlag };
 
@@ -619,7 +619,7 @@ static void debugLogPacketHeader(const uint8_t *data, size_t size)
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
 	logMessage(LOG_DEBUG, "Inspecting %zu-byte DHCP packet from "
-			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d ...\n",
+			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d\n",
 			size,
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
 			destIP->o1, destIP->o2, destIP->o3, destIP->o4
