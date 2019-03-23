@@ -38,6 +38,7 @@
 #include "ipv4.h"
 #include "udp.h"
 #include "dhcp.h"
+#include <inttypes.h>
 
 #define MIN_BOOTP_SIZE 300
 
@@ -163,7 +164,8 @@ int main(int argc, char *argv[])
 	initSignalHandler();
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to mangle ...\n");
+		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to "
+				"mangle on queue %" PRIu16 " ...\n", config->queue);
 	else
 		logMessage(LOG_INFO, "Started\n");
 
