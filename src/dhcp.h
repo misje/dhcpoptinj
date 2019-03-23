@@ -57,5 +57,6 @@ struct DHCPOption
 #pragma pack()
 
 const char *dhcp_msgTypeString(uint8_t msgType);
+const char *dhcp_optionString(uint8_t option);
 
 #endif // DHCPOPTINJ_DHCP_H
