@@ -619,10 +619,11 @@ static void debugLogPacketHeader(const uint8_t *data, size_t size)
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
 	logMessage(LOG_DEBUG, "Inspecting %zu-byte DHCP packet from "
-			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d\n",
+			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d:%d\n",
 			size,
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-			destIP->o1, destIP->o2, destIP->o3, destIP->o4
+			destIP->o1, destIP->o2, destIP->o3, destIP->o4,
+			ntohs(packet->udpHeader.destPort)
 			);
 }
 
