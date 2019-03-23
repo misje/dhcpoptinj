@@ -47,6 +47,7 @@ target_compile_options(dhcpoptinj PRIVATE
 	-Wshadow
 	-Wsign-conversion
 	-Wstrict-overflow=5
+	-Wno-error=strict-overflow
 	-Wswitch-default
 	-Wundef
 	-Werror
