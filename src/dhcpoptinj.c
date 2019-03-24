@@ -38,6 +38,7 @@
 #include "ipv4.h"
 #include "udp.h"
 #include "dhcp.h"
+#include <inttypes.h>
 
 #define MIN_BOOTP_SIZE 300
 
@@ -56,10 +57,10 @@ enum MangleResult
 };
 
 /* Somewhat arbitrary, feel free to change */
-static const int maxPacketSize = 2048;
+static const uint32_t maxPacketSize = 2048;
 /* The netfilter queue length 20 is also arbitrary. Hopefully it is
  * sufficient. */
-static const int maxQueueLen = 20;
+static const uint32_t maxQueueLen = 20;
 static struct Config *config;
 static bool daemonised;
 static sig_atomic_t escapeMainLoop;
@@ -92,7 +93,9 @@ static void inspectOptions(void);
 /* Debug-print packet header */
 static void debugLogPacketHeader(const uint8_t *data, size_t size);
 /* Debug-print packet's existing DHCP options */
-static void debugLogOption(const struct DHCPOption *option);
+static void debugLogOptionFound(const struct DHCPOption *option);
+static void debugLogOption(const char *action, const struct DHCPOption *option);
+static void debugLogInjectedOptions(void);
 
 int main(int argc, char *argv[])
 {
@@ -103,7 +106,7 @@ int main(int argc, char *argv[])
 	debugLogOptions();
 	inspectOptions();
 
-	logMessage(LOG_DEBUG, "Initialising netfilter queue …\n");
+	logMessage(LOG_DEBUG, "Initialising netfilter queue\n");
 
 	struct nfq_handle *nfq = nfq_open();
 	if (!nfq)
@@ -148,7 +151,7 @@ int main(int argc, char *argv[])
 
 	if (!config->foreground)
 	{
-		logMessage(LOG_DEBUG, "Daemonising …\n");
+		logMessage(LOG_DEBUG, "Daemonising\n");
 		if (daemon(false, false))
 		{
 			logMessage(LOG_ERR, "Failed to daemonise: daemon() failed: %s\n", 
@@ -163,7 +166,8 @@ int main(int argc, char *argv[])
 	initSignalHandler();
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to mangle …\n");
+		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to "
+				"mangle on queue %" PRIu16 "\n", config->queue);
 	else
 		logMessage(LOG_INFO, "Started\n");
 
@@ -197,14 +201,14 @@ int main(int argc, char *argv[])
 		logMessage(LOG_NOTICE, "Caught signal %s\n", signalName);
 	}
 
-	logMessage(LOG_DEBUG, "Destroying netfilter queue …\n");
+	logMessage(LOG_DEBUG, "Destroying netfilter queue\n");
 	nfq_destroy_queue(queue);
 
 	/* According to libnetfilter_queue's nfqnl_test.c example, nfq_unbind_pf(…)
 	 * should NOT be called during clean up. */
 	nfq_close(nfq);
 
-	logMessage(LOG_NOTICE, "Exiting …\n");
+	logMessage(LOG_NOTICE, "Exiting\n");
 	removePIDFile();
 	destroyConfig();
 
@@ -277,7 +281,7 @@ static int inspectPacket(struct nfq_q_handle *queue, struct nfgenmsg *pktInfo,
 	}
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Sending mangled packet …\n");
+		logMessage(LOG_DEBUG, "Sending mangled packet\n");
 
 	int res = nfq_set_verdict(queue, ntohl(metaHeader->packet_id), NF_ACCEPT, 
 			mangledDataSize, mangledData);
@@ -369,7 +373,7 @@ static enum MangleResult manglePacket(const uint8_t *origData, size_t origDataSi
 
 	if (padding && config->debug)
 		logMessage(LOG_DEBUG, "Padding with %zu byte(s) to meet minimal BOOTP payload "
-				"size …\n", padding);
+				"size\n", padding);
 
 	/* Pad to (at least) MIN_BOOTP_SIZE bytes: */
 	for (size_t i = *newDataSize - padding; i < *newDataSize; ++i)
@@ -401,7 +405,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 				if (padCount)
 					logMessage(LOG_DEBUG, "Found %zu PAD options (removing)\n", padCount);
 
-				debugLogOption(option);
+				debugLogOptionFound(option);
 				padCount = 0;
 			}
 		}
@@ -457,7 +461,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	}
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Injecting %zu option(s) …\n", config->dhcpOptCodeCount);
+		debugLogInjectedOptions();
 
 	/* Inject DHCP options: */
 	for (size_t i = 0; i < config->dhcpOptsSize; ++i)
@@ -466,7 +470,7 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	newOffset += config->dhcpOptsSize;
 
 	if (config->debug)
-		logMessage(LOG_DEBUG, "Inserting END option …\n");
+		logMessage(LOG_DEBUG, "Inserting END option\n");
 
 	/* Finally insert the END option: */
 	newData[newOffset++] = DHCPOPT_END;
@@ -514,7 +518,7 @@ static void writePID(void)
 		return;
 
 	pid_t pid = getpid();
-	logMessage(LOG_DEBUG, "Writing PID %ld to %s …\n", (long)pid, config->pidFile);
+	logMessage(LOG_DEBUG, "Writing PID %ld to %s\n", (long)pid, config->pidFile);
 
 	FILE *f = fopen(config->pidFile, "w");
 	if (!f)
@@ -531,7 +535,7 @@ static void removePIDFile(void)
 {
 	if (config->pidFile)
 	{
-		logMessage(LOG_DEBUG, "Removing PID file %s …\n", config->pidFile);
+		logMessage(LOG_DEBUG, "Removing PID file %s\n", config->pidFile);
 		unlink(config->pidFile);
 	}
 }
@@ -543,7 +547,7 @@ static void destroyConfig(void)
 
 static void initSignalHandler(void)
 {
-	logMessage(LOG_DEBUG, "Initialising signal handler …\n");
+	logMessage(LOG_DEBUG, "Initialising signal handler\n");
 
 	struct sigaction sigAction = { .sa_handler = &setEscapeMainLoopFlag };
 
@@ -584,7 +588,8 @@ static void debugLogOptions(void)
 		uint8_t code = config->dhcpOptCodes[i];
 		bool atEnd = i == config->dhcpOptCodeCount - 1;
 		const char *delim = atEnd ? "\n" : ", ";
-		logMessage(LOG_DEBUG, "0x%02X (%u)%s", code, code, delim);
+		logMessage(LOG_DEBUG, "%u (0x%02X) (%s)%s", code, code, dhcp_optionString(
+					code), delim);
 	}
 }
 
@@ -617,14 +622,15 @@ static void debugLogPacketHeader(const uint8_t *data, size_t size)
 	const struct IPAddr *destIP = (const struct IPAddr *)&packet->ipHeader.destAddr; 
 
 	logMessage(LOG_DEBUG, "Inspecting %zu-byte DHCP packet from "
-			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d …\n",
+			"%02X:%02X:%02X:%02X:%02X:%02X to %d.%d.%d.%d:%d\n",
 			size,
 			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-			destIP->o1, destIP->o2, destIP->o3, destIP->o4
+			destIP->o1, destIP->o2, destIP->o3, destIP->o4,
+			ntohs(packet->udpHeader.destPort)
 			);
 }
 
-static void debugLogOption(const struct DHCPOption *option)
+static void debugLogOptionFound(const struct DHCPOption *option)
 {
 	if (option->code == DHCPOPT_PAD)
 		return;
@@ -632,22 +638,47 @@ static void debugLogOption(const struct DHCPOption *option)
 		logMessage(LOG_DEBUG,"Found END option %s\n", config->dhcpOptCodeCount ?
 				"(removing)" : "(copying)");
 	else if (option->code == DHCPOPT_TYPE && option->length == 1)
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) (DHCP message type): %s",
+		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type)        %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
+		debugLogOption("Found", option);
+}
+
+static void debugLogOption(const char *action, const struct DHCPOption *option)
+{
+	/* String buffer for hex string (maximum DHCP option length (256) times
+	 * three characters (two digits and a space)) */
+	char optPayload[256 * 3];
+	size_t i = 0;
+	for (; i < option->length; ++i)
+		sprintf(optPayload + 3*i, "%02X ", option->data[i]);
+
+	/* Remove last space: */
+	if (i)
+		optPayload[3*i - 1] = '\0';
+
+	const char *optName = dhcp_optionString(option->code);
+	size_t optNameLen = strlen(optName);
+	const size_t alignedWidth = 24;
+	logMessage(LOG_DEBUG, "%s option %' '3hhu (0x%02hhX) (%s)%*s with %' '3u-byte payload %s",
+			action,
+			option->code,
+			option->code,
+			optName,
+			optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
+			"",
+			option->length,
+			optPayload);
+}
+
+static void debugLogInjectedOptions(void)
+{
+	for (size_t offset = 0; offset < config->dhcpOptsSize;)
 	{
-		/* String buffer for hex string (maximum DHCP option length (256) times
-		 * three characters (two digits and a space)) */
-		char optPayload[256 * 3];
-		size_t i = 0;
-		for (; i < option->length; ++i)
-			sprintf(optPayload + 3*i, "%02X ", option->data[i]);
-
-		/* Remove last space: */
-		if (i)
-			optPayload[3*i - 1] = '\0';
-
-		logMessage(LOG_DEBUG, "Found option %hhu (0x%02hhX) with %' '3u-byte payload %s",
-				option->code, option->code, option->length, optPayload);
+		const struct DHCPOption *option = (const struct DHCPOption *)(&config->dhcpOpts[offset]);
+		debugLogOption("Injecting", option);
+		logMessage(LOG_DEBUG, "%s", "\n");
+		offset += option->code == DHCPOPT_PAD || option->code == DHCPOPT_END ? 1
+			: sizeof(struct DHCPOption) + option->length;
 	}
 }

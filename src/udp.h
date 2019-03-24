@@ -22,12 +22,14 @@
 
 #include <stdint.h>
 
+#pragma pack(2)
 struct UDPHeader
 {
 	uint16_t sourcePort;
 	uint16_t destPort;
 	uint16_t length;
 	uint16_t checksum;
-} __attribute__((packed));
+};
+#pragma pack()
 
 #endif // DHCPOPTINJ_UDP_H
