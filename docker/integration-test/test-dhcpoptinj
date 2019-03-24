@@ -1,0 +1,47 @@
+#!/bin/bash
+set -e
+set -o pipefail
+set -o nounset
+
+function cleanup {
+	ip link del client || true
+	iptables -t mangle -F || true
+	pkill dhclient || true
+	pkill dhcpoptinj || true
+}
+trap cleanup EXIT
+
+function printfail {
+	2>&1 echo 'FAILED'
+}
+trap printfail ERR
+
+echo 'Setting up interfaces'
+# Create to virtual interfaces linked together:
+ip link add client type veth peer name server
+# Bring up interfaces:
+ip link set client up
+ip link set server up
+# Add an IP address to the server side:
+ip addr add 10.20.30.1/24 dev server
+# dnsmasq cannot be started in docker build due to lack of NET_ADMIN
+# capabilities. Restarting it for every test is unnecessary (dnsmasq appeares
+# to cope well losing the interfaces it's listening to), but why not:
+echo '(Re)starting dnsmasq'
+service dnsmasq restart
+# Send packets to port 67 (aimed for DHCP server) coming in on the
+# 'server' interface sto netfilter queue number 42 (arbitrary number):
+echo 'Inserting iptables rules'
+iptables -t mangle -A PREROUTING -i server -p udp --dport 67 -j NFQUEUE --queue-num 42
+# Run dhcpoptinj with the relay agent information option 'Fjas':
+echo 'Starting dhcpoptinj'
+>/dev/null dhcpoptinj -d -r -q42 -o'52 01 04 46 6A 61 73'
+
+# Request an address using DHCP on interface 'client':
+echo 'Requesting address'
+>/dev/null timeout 4 dhclient client
+# Ensure that the option was injected. There are many ways to verify this, so
+# just a simple thing to search for:
+grep -q mangled.packet /tmp/dhcp.log && echo 'SUCCESS'
+# Finally stop the DHCP client:
+>/dev/null dhclient -r client || true
