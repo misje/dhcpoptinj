@@ -5,11 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+## 0.4.3 - 2019-03-19
 ### Added
-- DHCP option names are printed
+- DHCP option names are printed along with their option codes.
 
 ### Changed
 - Debug output is more detailed and aligned.
+
+### Fixed
+- Alignment and explicit data type conversions are used to compile without
+  errors on 32-bit architectures.
+- Do not fail on strict-overflow warnings, as some may be ignored.
+- Do not use non-ASCII characters in debug output. They were not strictly
+  needed.
 
 ## 0.4.2 - 2019-01-17
 ### Changed
