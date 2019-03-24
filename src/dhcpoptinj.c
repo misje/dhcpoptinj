@@ -638,7 +638,7 @@ static void debugLogOptionFound(const struct DHCPOption *option)
 		logMessage(LOG_DEBUG,"Found END option %s\n", config->dhcpOptCodeCount ?
 				"(removing)" : "(copying)");
 	else if (option->code == DHCPOPT_TYPE && option->length == 1)
-		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type):       %s",
+		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type)        %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
 		debugLogOption("Found", option);
