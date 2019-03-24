@@ -17,7 +17,7 @@ function printfail {
 trap printfail ERR
 
 echo 'Setting up interfaces'
-# Create to virtual interfaces linked together:
+# Create two virtual interfaces linked together:
 ip link add client type veth peer name server
 # Bring up interfaces:
 ip link set client up
@@ -25,12 +25,12 @@ ip link set server up
 # Add an IP address to the server side:
 ip addr add 10.20.30.1/24 dev server
 # dnsmasq cannot be started in docker build due to lack of NET_ADMIN
-# capabilities. Restarting it for every test is unnecessary (dnsmasq appeares
+# capabilities. Restarting it for every test is unnecessary (dnsmasq appears
 # to cope well losing the interfaces it's listening to), but why not:
 echo '(Re)starting dnsmasq'
 service dnsmasq restart
 # Send packets to port 67 (aimed for DHCP server) coming in on the
-# 'server' interface sto netfilter queue number 42 (arbitrary number):
+# 'server' interface to netfilter queue number 42 (arbitrary number):
 echo 'Inserting iptables rules'
 iptables -t mangle -A PREROUTING -i server -p udp --dport 67 -j NFQUEUE --queue-num 42
 # Run dhcpoptinj with the relay agent information option 'Fjas':
