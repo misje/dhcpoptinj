@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.4.4 - 2019-03-25
+### Fixed
+- Update version number in binary.
+
 ## 0.4.3 - 2019-03-19
 ### Added
 - DHCP option names are printed along with their option codes.
