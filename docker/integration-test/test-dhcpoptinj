@@ -1,7 +1,5 @@
 #!/bin/bash
-set -e
-set -o pipefail
-set -o nounset
+set -euE -o pipefail -o nounset
 
 function cleanup {
 	ip link del client || true
