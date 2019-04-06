@@ -584,7 +584,7 @@ static void debugLogOptions(void)
 	if (!config->debug)
 		return;
 
-	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (total of %zu bytes): ",
+	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (with a total of %zu bytes): ",
 			config->dhcpOptCodeCount, config->dhcpOptsSize);
 
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
@@ -595,6 +595,8 @@ static void debugLogOptions(void)
 		logMessage(LOG_DEBUG, "%u (0x%02X) (%s)%s", code, code, dhcp_optionString(
 					code), delim);
 	}
+	logMessage(LOG_DEBUG, "Existing options will be %s\n", config->removeExistOpt ?
+			"removed" : "left in place");
 }
 
 static void inspectOptions(void)

@@ -57,6 +57,7 @@ target_compile_options(dhcpoptinj PRIVATE
 	-Wold-style-definition
 	-fstack-protector
 	-Wwrite-strings
+	-Wmissing-field-initializers
 	-D_POSIX_SOURCE
 	-D_DEFAULT_SOURCE
 	-D_FORTIFY_SOURCE=2
