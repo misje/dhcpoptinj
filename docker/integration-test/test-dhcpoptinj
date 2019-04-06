@@ -13,7 +13,8 @@ function printfail {
 	2>&1 echo 'FAILED'
 }
 trap printfail ERR
-
+# Start syslog if it is not already running:
+>/dev/null pgrep -x rsyslogd || { echo 'Starting syslog'; >/dev/null service rsyslog start; }
 echo 'Setting up interfaces'
 # Create two virtual interfaces linked together:
 ip link add client type veth peer name server
