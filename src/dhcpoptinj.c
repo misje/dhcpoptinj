@@ -482,6 +482,8 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	return Mangle_OK;
 }
 
+/* Instruct clang that "format" is a printf-style format parameter to avoid
+ * non-literal format string warnings in clang: */
 __attribute__((__format__ (__printf__, 2, 0)))
 static void logMessage(int priority, const char *format, ...)
 {
