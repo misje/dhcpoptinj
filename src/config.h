@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -53,7 +53,7 @@ struct Config
 	bool fwdOnFail;
 };
 
-struct Config *conf_parseOpts(int argc, char **argv);
+struct Config *conf_parseOpts(int argc, char * const *argv);
 void conf_destroy(struct Config *config);
 
 #endif // DHCPOPTINJ_CONFIG_H

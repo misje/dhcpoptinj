@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -82,6 +82,11 @@ int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t siz
 
 	++list->count;
 	return 0;
+}
+
+size_t dhcpOpt_count(struct DHCPOptList *list)
+{
+	return list->count;
 }
 
 int dhcpOpt_serialise(const struct DHCPOptList *list, uint8_t **buffer, size_t *size)

@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -42,12 +42,14 @@
 
 #define MIN_BOOTP_SIZE 300
 
+#pragma pack(1)
 struct Packet
 {
 	struct IPv4Header ipHeader;
 	struct UDPHeader udpHeader;
 	struct BootP bootp;
-} __attribute__((packed));
+};
+#pragma pack()
 
 enum MangleResult
 {
@@ -57,7 +59,8 @@ enum MangleResult
 };
 
 /* Somewhat arbitrary, feel free to change */
-static const uint32_t maxPacketSize = 2048;
+#define MAX_PACKET_SIZE 2048
+
 /* The netfilter queue length 20 is also arbitrary. Hopefully it is
  * sufficient. */
 static const uint32_t maxQueueLen = 20;
@@ -135,7 +138,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (nfq_set_mode(queue, NFQNL_COPY_PACKET, maxPacketSize) < 0)
+	if (nfq_set_mode(queue, NFQNL_COPY_PACKET, MAX_PACKET_SIZE) < 0)
 	{
 		logMessage(LOG_ERR, "Failed to set netfilter queue mode: %s\n", strerror(
 					errno));
@@ -175,7 +178,7 @@ int main(int argc, char *argv[])
 	int queueFd = nfq_fd(nfq);
 	for (; !escapeMainLoop; )
 	{
-		char packet[maxPacketSize] __attribute__((aligned));
+		char packet[MAX_PACKET_SIZE] __attribute__((aligned));
 		ssize_t bytes = recv(queueFd, packet, sizeof(packet), 0);
 		if (bytes < -1)
 		{
@@ -479,6 +482,9 @@ static enum MangleResult mangleOptions(const uint8_t *origData, size_t origDataS
 	return Mangle_OK;
 }
 
+/* Instruct clang that "format" is a printf-style format parameter to avoid
+ * non-literal format string warnings in clang: */
+__attribute__((__format__ (__printf__, 2, 0)))
 static void logMessage(int priority, const char *format, ...)
 {
 	if (priority == LOG_DEBUG && !config->debug)
@@ -580,7 +586,7 @@ static void debugLogOptions(void)
 	if (!config->debug)
 		return;
 
-	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (total of %zu bytes): ",
+	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (with a total of %zu bytes): ",
 			config->dhcpOptCodeCount, config->dhcpOptsSize);
 
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
@@ -591,6 +597,8 @@ static void debugLogOptions(void)
 		logMessage(LOG_DEBUG, "%u (0x%02X) (%s)%s", code, code, dhcp_optionString(
 					code), delim);
 	}
+	logMessage(LOG_DEBUG, "Existing options will be %s\n", config->removeExistOpt ?
+			"removed" : "left in place");
 }
 
 static void inspectOptions(void)
@@ -638,7 +646,7 @@ static void debugLogOptionFound(const struct DHCPOption *option)
 		logMessage(LOG_DEBUG,"Found END option %s\n", config->dhcpOptCodeCount ?
 				"(removing)" : "(copying)");
 	else if (option->code == DHCPOPT_TYPE && option->length == 1)
-		logMessage(LOG_DEBUG, "Found option %' '3hhu (0x%02hhX) (DHCP message type)        %s",
+		logMessage(LOG_DEBUG, "Found option % 3hhd (0x%02hhX) (DHCP message type)        %s",
 				option->code, option->code, dhcp_msgTypeString(option->data[0]));
 	else
 		debugLogOption("Found", option);
@@ -660,7 +668,7 @@ static void debugLogOption(const char *action, const struct DHCPOption *option)
 	const char *optName = dhcp_optionString(option->code);
 	size_t optNameLen = strlen(optName);
 	const size_t alignedWidth = 24;
-	logMessage(LOG_DEBUG, "%s option %' '3hhu (0x%02hhX) (%s)%*s with %' '3u-byte payload %s",
+	logMessage(LOG_DEBUG, "%s option % 3hhd (0x%02hhX) (%s)%*s with % 3d-byte payload %s",
 			action,
 			option->code,
 			option->code,

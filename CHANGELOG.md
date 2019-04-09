@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.0 - 2019-04-19
+### Added
+- Parse configuration from file.
+- Add copyright to usage output.
+
+### Fixed
+- Fix pedantic errors from clang.
+
 ## 0.4.4 - 2019-03-25
 ### Fixed
 - Update version number in binary.
