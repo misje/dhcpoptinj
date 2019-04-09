@@ -115,6 +115,39 @@ use a build directory, you can get rid of all the cmake rubbish by running `git
 clean -dfx`. Note, however, that this removes **everything** in the project
 directory that is not under source control.
 
+## Configuration file
+
+dhcptopinj will attempt to parse /etc/dhcpoptinj.conf or the file passed with
+-c/--conf-file. The syntax of the configuration file is
+* **key=value**, where *key* is the long option name, or
+* **key** if the option does not take an argument
+
+Whitespace is optional. Anything after and including the character **#** is
+considered a comment. DHCP options are listed one-by-one as *option=01:02:03*.
+Quotes around the option hex string is optional, and the bytes may be separated
+by any number of non-hexadecimal characters.
+
+The options *version*, *help* and *conf-file* are not accepted in a
+configuration file.
+
+Example:
+```conf
+# Run in foreground:
+foreground
+# Enable debug output:
+debug
+# Override hostname to "fjasehost":
+option = '0C 66 6A 61 73 65 68 6F 73 74'
+# Send agent ID "Fjas":
+option = "52:01:04:46:6A:61:73"
+# Override address request to ask for 10.20.30.40:
+option=320A141E28
+# Use queue 12:
+queue = 12
+
+remove-existing-opt # Remove options before inserting
+```
+
 ## Help
 
 This readme should have got you started. There is no man page for dhcpoptinj,
