@@ -77,7 +77,12 @@ this option as the last option automatically.
 
 ## Installing
 
-dhcoptinj is quite a simple program and should be unproblematic to build.
+dhcpoptinj is submitted to Debian and will hopefully make it to unstable (and
+consequently testing and stable) in not too long. The deb package is under
+source control at [salsa](https://salsa.debian.org/misje-guest/dhcpoptinj).
+Installing dhcpoptinj from the deb package is recommended over the following
+manual installation procedure, because it also includes a man page, bash
+completion rules, example files etc. 
 
 ### Prerequisites
 
@@ -98,13 +103,6 @@ install cmake libnetfilter-queue-dev`.
 1. Run make: `make -j4`
 1. Install (optional, but you will benefit from having dhcpoptinj in your
 	PATH): `sudo make install`
-
-The makefile does not install the man page (doc/dhcpoptinj.8) nor the bash
-completion file (debian/dhcpoptinj.bash-completion). Debhelper does such a good
-job of making sure that these files are installed correctly, making sure the
-completions work instantly and that the man-db is updated. I have no intention
-of duplicating this installation logic, so please use the deb package if you
-want these extra files.
 
 ### Demolish
 
@@ -150,9 +148,9 @@ remove-existing-opt # Remove options before inserting
 
 ## Help
 
-This readme should have got you started. There is no man page for dhcpoptinj,
-but the help (`dhcpoptinj -h`) should cover everything the utility has to
-offer.
+This readme should have got you started. Also check out the man page (in the
+deb package) and the help output (`dhcpoptinj -h`), which should cover
+everything the utility has to offer.
 
 For bugs and suggestions please create an issue.
 
