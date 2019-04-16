@@ -173,14 +173,6 @@ following are missing features that hopefully will be added some day:
 
 ### Known issues
 
-I am not experienced in the netfilter library. There may be (although I cannot
-promise) bugs.
-
-1. *Syscall param socketcall.sendto(msg) points to uninitialised byte(s)*
-	valgrind error
-
-	This issue is not fully investigated yet.
-
 1. Memory leak on non-normal exit.
 
 	This is not considered a leak. However, there should be no memory leak on a

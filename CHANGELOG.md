@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Use 1-byte alignment on DHCP options.
 - Refer to salsa.debian.org for deb package source.
+- Remove old bug reference in README.
 
 ### Fixed
 - Allow optional values to configuration file keywords (corretly support
