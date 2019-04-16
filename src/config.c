@@ -631,7 +631,7 @@ static int parseKeyValue(const char *key, const char *value, const char *filePat
 		if (strcmp(key, options[option].name))
 			continue;
 
-		if (options[option].has_arg && !value)
+		if (options[option].has_arg == required_argument && !value)
 		{
 			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s requires an argument\n",
 					filePath, lineNo, options[option].name);
