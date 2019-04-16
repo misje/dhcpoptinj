@@ -47,7 +47,9 @@ struct BootP
 	uint32_t cookie;
 	// options …
 };
+#pragma pack()
 
+#pragma pack(1)
 struct DHCPOption
 {
 	uint8_t code;
