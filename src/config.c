@@ -570,8 +570,9 @@ static void validateOptionCombinations(void)
 			/* If an option other than --option is passed more than once, freak out: */
 			if (optionCount[source][option] > 1 && option != OPT_OPTION)
 			{
-				fprintf(stderr, "%s%s can only be passed once\n",
+				fprintf(stderr, "%s%s can only be %s once\n",
 						source == SOURCE_CMD_LINE ? "Option --" : "Keyword ",
+						source == SOURCE_CMD_LINE ? "passed" : "specified",
 						options[option].name);
 				printUsage();
 				exit(EXIT_FAILURE);
