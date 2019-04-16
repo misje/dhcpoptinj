@@ -77,7 +77,12 @@ this option as the last option automatically.
 
 ## Installing
 
-dhcoptinj is quite a simple program and should be unproblematic to build.
+dhcpoptinj is submitted to Debian and will hopefully make it to unstable (and
+consequently testing and stable) in not too long. The deb package is under
+source control at [salsa](https://salsa.debian.org/misje-guest/dhcpoptinj).
+Installing dhcpoptinj from the deb package is recommended over the following
+manual installation procedure, because it also includes a man page, bash
+completion rules, example files etc. 
 
 ### Prerequisites
 
@@ -99,13 +104,6 @@ install cmake libnetfilter-queue-dev`.
 1. Install (optional, but you will benefit from having dhcpoptinj in your
 	PATH): `sudo make install`
 
-The makefile does not install the man page (doc/dhcpoptinj.8) nor the bash
-completion file (debian/dhcpoptinj.bash-completion). Debhelper does such a good
-job of making sure that these files are installed correctly, making sure the
-completions work instantly and that the man-db is updated. I have no intention
-of duplicating this installation logic, so please use the deb package if you
-want these extra files.
-
 ### Demolish
 
 1. Run `sudo make uninstall` from your build directory
@@ -115,11 +113,44 @@ use a build directory, you can get rid of all the cmake rubbish by running `git
 clean -dfx`. Note, however, that this removes **everything** in the project
 directory that is not under source control.
 
+## Configuration file
+
+dhcptopinj will attempt to parse /etc/dhcpoptinj.conf or the file passed with
+-c/--conf-file. The syntax of the configuration file is
+* **key=value**, where *key* is the long option name, or
+* **key** if the option does not take an argument
+
+Whitespace is optional. Anything after and including the character **#** is
+considered a comment. DHCP options are listed one-by-one as *option=01:02:03*.
+Quotes around the option hex string is optional, and the bytes may be separated
+by any number of non-hexadecimal characters.
+
+The options *version*, *help* and *conf-file* are not accepted in a
+configuration file.
+
+Example:
+```conf
+# Run in foreground:
+foreground
+# Enable debug output:
+debug
+# Override hostname to "fjasehost":
+option = '0C 66 6A 61 73 65 68 6F 73 74'
+# Send agent ID "Fjas":
+option = "52:01:04:46:6A:61:73"
+# Override address request to ask for 10.20.30.40:
+option=320A141E28
+# Use queue 12:
+queue = 12
+
+remove-existing-opt # Remove options before inserting
+```
+
 ## Help
 
-This readme should have got you started. There is no man page for dhcpoptinj,
-but the help (`dhcpoptinj -h`) should cover everything the utility has to
-offer.
+This readme should have got you started. Also check out the man page (in the
+deb package) and the help output (`dhcpoptinj -h`), which should cover
+everything the utility has to offer.
 
 For bugs and suggestions please create an issue.
 
@@ -141,14 +172,6 @@ following are missing features that hopefully will be added some day:
 	queue number.
 
 ### Known issues
-
-I am not experienced in the netfilter library. There may be (although I cannot
-promise) bugs.
-
-1. *Syscall param socketcall.sendto(msg) points to uninitialised byte(s)*
-	valgrind error
-
-	This issue is not fully investigated yet.
 
 1. Memory leak on non-normal exit.
 

@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.1 - 2019-04-16
+### Changed
+- Use 1-byte alignment on DHCP options.
+- Refer to salsa.debian.org for deb package source.
+- Remove old bug reference in README.
+
+### Fixed
+- Allow optional values to configuration file keywords (corretly support
+  "pid-file" as on the command line).
+
+## 0.5.0 - 2019-04-09
+### Added
+- Parse configuration from file.
+- Add copyright to usage output.
+
+### Fixed
+- Fix pedantic errors from clang.
+
 ## 0.4.4 - 2019-03-25
 ### Fixed
 - Update version number in binary.

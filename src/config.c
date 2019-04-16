@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -26,202 +26,173 @@
 #include "options.h"
 #include <ctype.h>
 #include "dhcp.h"
+#include <errno.h>
+#include <ctype.h>
 
+static const char programName[] = "dhcpoptinj";
 static const char defaultPIDFilePath[] = "/var/run/dhcpoptinj.pid";
+static const char defaultConfFilePath[] = "/etc/dhcpoptinj.conf";
+
+/* DHCP option lists for later serialisation: One for command line input and
+ * one for configuration file(s). They need to be separated so that one source
+ * does not override the other; the configuration file may be read in the
+ * middle of the command line option parsing. */
+static struct DHCPOptList *cmdDHCPOptList, *fileDHCPOptList;
+
+enum Source
+{
+	SOURCE_CMD_LINE           = 0,
+	SOURCE_FILE,
+};
+
+enum ConfFileParseOption
+{
+	PARSE_ALLOW_NOEXIST       = 0,
+	PARSE_REQUIRE_EXIST       = 1,
+};
+
+/* Definitions for long-only options that cannot be identified with an ASCII
+ * character: */
+enum LongOnlyOpt {
+	ForwardOnFail             = 1000,
+};
+
+/* Option definitions used to index options[] and optionCount[]: */
+enum Option
+{
+	OPT_CONF_FILE             = 0,
+	OPT_DEBUG,
+	OPT_FOREGROUND,
+	OPT_FORWARD_ON_FAIL,
+	OPT_HELP,
+	OPT_IGNORE_EXISTING_OPT,
+	OPT_OPTION,
+	OPT_PID_FILE,
+	OPT_QUEUE,
+	OPT_REMOVE_EXISTING_OPT,
+	OPT_VERSION,
+
+	OPT_COUNT,
+};
+
+static const int sources[] = 
+{
+	SOURCE_CMD_LINE,
+	SOURCE_FILE,
+};
+
+static const struct option options[] =
+{
+	[OPT_CONF_FILE]           = { "conf-file",           optional_argument, NULL, 'c' },
+	[OPT_DEBUG]               = { "debug",               no_argument,       NULL, 'd' },
+	[OPT_FOREGROUND]          = { "foreground",          no_argument,       NULL, 'f' },
+	[OPT_FORWARD_ON_FAIL]     = { "forward-on-fail",     no_argument,       NULL, ForwardOnFail },
+	[OPT_HELP]                = { "help",                no_argument,       NULL, 'h' },
+	[OPT_IGNORE_EXISTING_OPT] = { "ignore-existing-opt", no_argument,       NULL, 'i' },
+	[OPT_OPTION]              = { "option",              required_argument, NULL, 'o' },
+	[OPT_PID_FILE]            = { "pid-file",            optional_argument, NULL, 'p' },
+	[OPT_QUEUE]               = { "queue",               required_argument, NULL, 'q' },
+	[OPT_REMOVE_EXISTING_OPT] = { "remove-existing-opt", no_argument,       NULL, 'r' },
+	[OPT_VERSION]             = { "version",             no_argument,       NULL, 'v' },
+	[OPT_COUNT]               = {0},
+};
+/* Count the number of times arguments have been passed on the command line
+ * and listed as keywords in the configuration file: */
+static unsigned int optionCount[][OPT_COUNT] =
+{
+	[SOURCE_CMD_LINE]         = {0},
+	[SOURCE_FILE]             = {0},
+};
 
 static struct Config *createDefaultConfig(void);
-static void printUsage(const char *programName);
-static void printHelp(const char *programName);
-static void printVersion(const char *programName);
+static void printUsage(void);
+static void printHelp(void);
+static void printVersion(void);
 static int parseQueueNum(const char *string, uint16_t *queueNum);
 static void addDHCPOption(struct DHCPOptList *list, const char *string);
+static void parseConfFile(struct Config *config, const char *filePath, int parseOpts);
+static void parseOption(struct Config *config, int option, char *arg, enum Source source);
+static void validateOptionCombinations(void);
+static unsigned int totalOptionCount(int option);
+static char *trim(char *text);
+static int parseKeyValue(const char *key, const char *value, const char *filePath,
+		unsigned lineNo);
 
-struct Config *conf_parseOpts(int argc, char **argv)
+
+struct Config *conf_parseOpts(int argc, char * const *argv)
 {
-	struct DHCPOptList *dhcpOptList = dhcpOpt_createList();
-	if (!dhcpOptList)
+	cmdDHCPOptList = dhcpOpt_createList();
+	fileDHCPOptList = dhcpOpt_createList();
+	if (!cmdDHCPOptList || !fileDHCPOptList)
 	{
 		fputs("Failed to allocate memory for DHCP option list\n", stderr);
 		exit(EXIT_FAILURE);
 	}
 
-	enum LongOnlyOpts {
-		ForwardOnFail = 1000,
-	};
-
 	struct Config *config = createDefaultConfig();
-	const struct option options[] =
-	{
-		{ "debug", no_argument, NULL, 'd' },
-		{ "foreground", no_argument, NULL, 'f' },
-		{ "forward-on-fail", no_argument, NULL, ForwardOnFail },
-		{ "help", no_argument, NULL, 'h' },
-		{ "ignore-existing-opt", no_argument, NULL, 'i' },
-		{ "option", required_argument, NULL, 'o' },
-		{ "pid-file", optional_argument, NULL, 'p' },
-		{ "queue", required_argument, NULL, 'q' },
-		{ "remove-existing-opt", no_argument, NULL, 'r' },
-		{ "version", no_argument, NULL, 'v' },
-		{ NULL, 0, NULL, 0 },
-	};
 
-	int dFlagCount = 0;
-	int fFlagCount = 0;
-	int fwdOnFailFlagCount = 0;
-	int iFlagCount = 0;
-	int oFlagCount = 0;
-	int pFlagCount = 0;
-	int qFlagCount = 0;
-	int rFlagCount = 0;
-
-	for (;;)
+	while (true)
 	{
-		int opt = getopt_long(argc, argv, "dfhio:p::q:rv", options, NULL);
+		int optVal = getopt_long(argc, argv, "c::dfhio:p::q:rv", options, NULL);
 
 		/* Parsing finished: */
-		if (opt == -1)
+		if (optVal == -1)
 			break;
 
-		switch (opt)
+		int option = 0;
+		for (; option < OPT_COUNT; ++option)
 		{
-			case 'd':
-				++dFlagCount;
-				config->debug = true;
+			/* Look for the option in the option list: */
+			if (optVal == options[option].val)
+			{
+				parseOption(config, option, optarg, SOURCE_CMD_LINE);
 				break;
-
-			case 'f':
-				++fFlagCount;
-				config->foreground = true;
-				break;
-
-			case ForwardOnFail:
-				++fwdOnFailFlagCount;
-				config->fwdOnFail = true;
-				break;
-
-			case 'h':
-				printHelp(argv[0]);
-				dhcpOpt_destroyList(dhcpOptList);
-				conf_destroy(config);
-				exit(EXIT_SUCCESS);
-				break;
-
-			case 'i':
-				++iFlagCount;
-				config->ignoreExistOpt = true;
-				break;
-				
-			case 'p':
-				++pFlagCount;
-				if (pFlagCount > 1)
-					break;
-				{
-					const char *src = optarg ? optarg : defaultPIDFilePath;
-					size_t pidFilePathLen = strlen(src);
-					config->pidFile = malloc(pidFilePathLen + 1);
-					if (!config->pidFile)
-					{
-						fputs("Could not allocate space for PID file name\n", stderr);
-						exit(EXIT_FAILURE);
-					}
-					strcpy(config->pidFile, src);
-				}
-				break;
-
-			case 'o':
-				++oFlagCount;
-				addDHCPOption(dhcpOptList, optarg);
-				break;
-
-			case 'q':
-				++qFlagCount;
-				if (!optarg || parseQueueNum(optarg, &config->queue))
-				{
-					fprintf(stderr, "Invalid queue number: %s\n", optarg);
-					printUsage(argv[0]);
-					exit(EXIT_FAILURE);
-				}
-				break;
-
-			case 'r':
-				++rFlagCount;
-				config->removeExistOpt = true;
-				break;
-
-			case 'v':
-				printVersion(argv[0]);
-				dhcpOpt_destroyList(dhcpOptList);
-				conf_destroy(config);
-				exit(EXIT_SUCCESS);
-				break;
-
-			default:
-				printUsage(argv[0]);
-				exit(EXIT_FAILURE);
-				break;
+			}
+		}
+		/* The option was not found and is invalid: */
+		if (option == OPT_COUNT)
+		{
+			printUsage();
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	if (
-			dFlagCount > 1 ||
-			fFlagCount > 1 ||
-			fwdOnFailFlagCount > 1 ||
-			iFlagCount > 1 ||
-			pFlagCount > 1 ||
-			qFlagCount > 1 ||
-			rFlagCount > 1
-			)
-	{
-		fputs("More than one option of a kind (not -o) was provided\n", stderr);
-		printUsage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
+	/* If a config file path was not specified on the command line load the
+	 * default file, but do not complain if it does not exist: */
+	if (!optionCount[SOURCE_CMD_LINE][OPT_CONF_FILE])
+		parseConfFile(config, defaultConfFilePath, PARSE_ALLOW_NOEXIST);
 
-	if (!qFlagCount)
-	{
-		fputs("Queue number required\n", stderr);
-		printUsage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
+	validateOptionCombinations();
 
-	if (!oFlagCount)
-	{
-		fputs("At least one DHCP option is required\n", stderr);
-		printUsage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
-	if (iFlagCount && rFlagCount)
-	{
-		fputs("Both -i and -r cannot be used at the same time\n", stderr);
-		printUsage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
+	/* dhcpoptinj does not accept any arguments, only options: */
 	if (argc - optind > 0)
 	{
-		fputs("No non-option arguments expected\n", stderr);
-		printUsage(argv[0]);
+		fputs("No non-option arguments expected, but the following was passed: ", stderr);
+		for (int i = optind; i < argc; ++i)
+			fprintf(stderr, "\"%s\"%s", argv[i], i == argc - 1 ? "\n" : ", ");
+
+		printUsage();
 		exit(EXIT_FAILURE);
 	}
 
-	if (oFlagCount)
+	/* If no DHCP options were passed on the command line use the options from
+	 * the configuration file: */
+	struct DHCPOptList *dhcpOptList = dhcpOpt_count(cmdDHCPOptList) ?
+		cmdDHCPOptList : fileDHCPOptList;
+	/* Add obligatory DHCP end option and serialise options: */
+	if (dhcpOpt_serialise(dhcpOptList, &config->dhcpOpts, &config->dhcpOptsSize))
 	{
-		/* Add obligatory DHCP end option and serialise options: */
-		if (dhcpOpt_serialise(dhcpOptList, &config->dhcpOpts, &config->dhcpOptsSize))
-		{
-			fputs("Failed to create DHCP option list\n", stderr);
-			exit(EXIT_FAILURE);
-		}
-		/* Create an array of just the DHCP option codes: */
-		if (dhcpOpt_optCodes(dhcpOptList, &config->dhcpOptCodes, &config->dhcpOptCodeCount))
-		{
-			fputs("Failed to create DHCP option code list\n", stderr);
-			exit(EXIT_FAILURE);
-		}
-
-		dhcpOpt_destroyList(dhcpOptList);
+		fputs("Failed to create DHCP option list\n", stderr);
+		exit(EXIT_FAILURE);
 	}
+	/* Create an array of just the DHCP option codes: */
+	if (dhcpOpt_optCodes(dhcpOptList, &config->dhcpOptCodes, &config->dhcpOptCodeCount))
+	{
+		fputs("Failed to create DHCP option code list\n", stderr);
+		exit(EXIT_FAILURE);
+	}
+	dhcpOpt_destroyList(cmdDHCPOptList);
+	dhcpOpt_destroyList(fileDHCPOptList);
 
 	return config;
 }
@@ -250,25 +221,27 @@ static struct Config *createDefaultConfig(void)
 	return config;
 }
 
-static void printUsage(const char *programName)
+static void printUsage(void)
 {
-	int progNameLen = (int)strlen(programName);
+	int progNameLen = (int)sizeof(programName) - 1;
+	printVersion();
 	printf(
-			"%s – DHCP option injector\n"
+			"\n"
          "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
+			"       %*s [-c config_file]\n"
 			"       %*s -q queue_num -o dhcp_option [(-o dhcp_option) ...]\n"
 			"       %s -h|-v\n"
 			,
 			programName,
-			programName,
+			progNameLen, "",
 			progNameLen, "",
 			programName
 			);
 }
 
-static void printHelp(const char *programName)
+static void printHelp(void)
 {
-	printUsage(programName);
+	printUsage();
 	printf(
 			"\n"
 			"%s takes a packet from a netfilter queue, ensures that it is a\n"
@@ -288,6 +261,8 @@ static void printHelp(const char *programName)
 			"\n"
 			"Options:\n"
 			"\n"
+			"  -c, --conf-file [file]     Specify a different configuration file,\n"
+         "                             or skip loading one altogether\n"
          "  -d, --debug                Make %s tell you as much as possible\n"
          "                             about what it does and tries to do\n"
          "  -f, --foreground           Prevent %s from running in the\n"
@@ -299,12 +274,12 @@ static void printHelp(const char *programName)
          "  -h, --help                 Print this help text\n"
 			"  -i, --ignore-existing-opt  Proceed if an injected option already exists\n"
 			"                             in the original packet. Unless\n"
-			"                             --remove-exisiting-opt is provided, the\n"
+			"                             --remove-existing-opt is provided, the\n"
 			"                             default behaviour is to drop the packet\n"
 			"  -o, --option dhcp_option   DHCP option to inject as a hex string,\n"
 			"                             where the first byte indicates the option\n"
 			"                             code. The option length field is automatically\n"
-			"                             calculatad and must be omitted. Several\n"
+			"                             calculated and must be omitted. Several\n"
 			"                             options may be injected\n"
 			"  -p, --pid-file [file]      Write PID to file, using specified path\n"
 			"                             or a default sensible location\n"
@@ -312,6 +287,20 @@ static void printHelp(const char *programName)
 			"  -r, --remove-existing-opt  Remove existing DHCP options of the same\n"
 			"                             kind as those to be injected\n"
          "  -v, --version              Display version\n"
+			,
+		programName,
+		programName,
+		programName,
+		programName,
+		programName,
+		programName);
+	printf(
+			"\n"
+			"%s will read %s (or the file specified with\n"
+			"--conf-file) for options, specified as long option names with values\n"
+			"separated by \"=\". \"conf-file\" is forbidden in a configuration file.\n"
+			"Options passed on the command line will override options in the\n"
+			"configuration file\n"
 			"\n"
 			"All the DHCP options specified with the -o/--option flag will be\n"
 			"added before the terminating option (end option, 255). The packet is\n"
@@ -349,16 +338,21 @@ static void printHelp(const char *programName)
 			"Be good and leave packets alone.\n"
          ,
 		programName,
-		programName,
-		programName,
-		programName,
-		programName,
-		programName);
+		defaultConfFilePath);
 }
 
-static void printVersion(const char *programName)
+static void printVersion(void)
 {
-	printf("%s – DHCP option injector, version %s\n", programName, DHCPOPTINJ_VERSION);
+	printf(
+			"%s - DHCP option injector, version %s\n"
+			"Copyright (C) 2015-2019 by Andreas Misje\n"
+			"\n"
+			"%s comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
+			"and you are welcome to redistribute it under certain conditions. See\n"
+			"the GNU General Public Licence for details.\n",
+			programName,
+			DHCPOPTINJ_VERSION,
+			programName);
 }
 
 static int parseQueueNum(const char *string, uint16_t *queueNum)
@@ -406,7 +400,7 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 	{
 		if (length < 2)
 		{
-			fprintf(stderr, "DHCP option string too short (payload expected): %s\n", 
+			fprintf(stderr, "The DHCP option string is too short (payload expected): %s\n", 
 					string);
 			exit(EXIT_FAILURE);
 		}
@@ -417,4 +411,244 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 		fputs("Failed to add DHCP option\n", stderr);
 		exit(EXIT_FAILURE);
 	}
+}
+
+static void parseConfFile(struct Config *config, const char *filePath, int parseOpts)
+{
+	FILE *file = fopen(filePath, "r");
+	if (!file && (parseOpts & PARSE_REQUIRE_EXIST))
+	{
+		fprintf(stderr, "Failed to open configuration file \"%s\": %s\n",
+				filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	else if (!file)
+		return;
+
+	printf("Parsing configuration file \"%s\"\n", filePath);
+
+	unsigned int lineNo = 0;
+	char line[1024];
+	while (fgets(line, sizeof(line), file))
+	{
+		++lineNo;
+		{
+			/* If the comment character '#' is found, terminate the string at
+			 * this position: */
+			char *commentStart = strchr(line, '#');
+			if (commentStart)
+				*commentStart = '\0';
+		}
+		char *key = line;
+		/* Keywords and values are separated by '=': */
+		char *value = strchr(line, '=');
+		/* Ensure that the "value" pointer is not at the end of the buffer,
+		 * since we aim to access data past it: */
+		if (value && value - key < (ptrdiff_t)(sizeof(line) - 1))
+		{
+			*value = '\0';
+			++value;
+			value = trim(value);
+		}
+		key = trim(key);
+		/* Line is a comment. Do not parse: */
+		if (!*key)
+			continue;
+
+		int option = parseKeyValue(key, value, filePath, lineNo);
+		parseOption(config, option, value, SOURCE_FILE);
+	}
+
+	fclose(file);
+}
+
+static void parseOption(struct Config *config, int option, char *arg, enum Source source)
+{
+	/* Do not override command line options from configuration file: */
+	if (source == SOURCE_FILE && optionCount[SOURCE_CMD_LINE][option])
+		return;
+
+	++optionCount[source][option];
+	switch (option)
+	{
+		case OPT_CONF_FILE:
+			/* An empty argument is allowed, in which case no file is ever loaded
+			 * (including the default one), so do nothing now that optionCount
+			 * has been incremented: */
+			if (arg)
+				parseConfFile(config, arg, PARSE_REQUIRE_EXIST);
+
+			break;
+
+		case OPT_DEBUG:
+			config->debug = true;
+			break;
+
+		case OPT_FOREGROUND:
+			config->foreground = true;
+			break;
+
+		case OPT_FORWARD_ON_FAIL:
+			config->fwdOnFail = true;
+			break;
+
+		case OPT_HELP:
+			if (source == SOURCE_FILE)
+			{
+				fprintf(stderr, "The option \"%s\" doesn't make sense in a configuration "
+						"file\n", options[option].name);
+				exit(EXIT_FAILURE);
+			}
+			printHelp();
+			dhcpOpt_destroyList(cmdDHCPOptList);
+			dhcpOpt_destroyList(fileDHCPOptList);
+			conf_destroy(config);
+			exit(EXIT_SUCCESS);
+			break;
+
+		case OPT_IGNORE_EXISTING_OPT:
+			config->ignoreExistOpt = true;
+			break;
+			
+		case OPT_PID_FILE:
+			if (config->pidFile)
+				break;
+			{
+				const char *src = arg ? arg : defaultPIDFilePath;
+				size_t pidFilePathLen = strlen(src);
+				config->pidFile = malloc(pidFilePathLen + 1);
+				if (!config->pidFile)
+				{
+					fputs("Could not allocate space for PID file name\n", stderr);
+					exit(EXIT_FAILURE);
+				}
+				strcpy(config->pidFile, src);
+			}
+			break;
+
+		case OPT_OPTION:
+			addDHCPOption(source == SOURCE_FILE ? fileDHCPOptList : cmdDHCPOptList, arg);
+			break;
+
+		case OPT_QUEUE:
+			if (!arg || parseQueueNum(arg, &config->queue))
+			{
+				fprintf(stderr, "Invalid queue number: %s\n", arg);
+				printUsage();
+				exit(EXIT_FAILURE);
+			}
+			break;
+
+		case OPT_REMOVE_EXISTING_OPT:
+			config->removeExistOpt = true;
+			break;
+
+		case OPT_VERSION:
+			if (source == SOURCE_FILE)
+			{
+				fprintf(stderr, "The option \"%s\" doesn't make sense in a configuration "
+						"file\n", options[option].name);
+				exit(EXIT_FAILURE);
+			}
+			printVersion();
+			dhcpOpt_destroyList(cmdDHCPOptList);
+			dhcpOpt_destroyList(fileDHCPOptList);
+			conf_destroy(config);
+			exit(EXIT_SUCCESS);
+			break;
+
+		default:
+			/* Only valid options are passed to this function */
+			break;
+	}
+}
+
+static void validateOptionCombinations(void)
+{
+	for (size_t source = 0; source < sizeof(sources)/sizeof(sources[0]); ++source)
+		for (size_t option = 0; option < OPT_COUNT; ++option)
+			/* If an option other than --option is passed more than once, freak out: */
+			if (optionCount[source][option] > 1 && option != OPT_OPTION)
+			{
+				fprintf(stderr, "%s%s can only be %s once\n",
+						source == SOURCE_CMD_LINE ? "Option --" : "Keyword ",
+						source == SOURCE_CMD_LINE ? "passed" : "specified",
+						options[option].name);
+				printUsage();
+				exit(EXIT_FAILURE);
+			}
+
+	if (!totalOptionCount(OPT_QUEUE))
+	{
+		fputs("Queue number required\n", stderr);
+		printUsage();
+		exit(EXIT_FAILURE);
+	}
+
+	if (!totalOptionCount(OPT_OPTION))
+	{
+		fputs("At least one DHCP option is required\n", stderr);
+		printUsage();
+		exit(EXIT_FAILURE);
+	}
+
+	if (totalOptionCount(OPT_IGNORE_EXISTING_OPT) && totalOptionCount(
+				OPT_REMOVE_EXISTING_OPT))
+	{
+		fprintf(stderr, "Both %s%s and %s%s cannot be used at the same time\n",
+				optionCount[SOURCE_CMD_LINE][OPT_IGNORE_EXISTING_OPT] ? "--" : "",
+				options[OPT_IGNORE_EXISTING_OPT].name,
+				optionCount[SOURCE_CMD_LINE][OPT_REMOVE_EXISTING_OPT] ? "--" : "",
+				options[OPT_REMOVE_EXISTING_OPT].name);
+		printUsage();
+		exit(EXIT_FAILURE);
+	}
+}
+
+static unsigned int totalOptionCount(int option)
+{
+	return optionCount[SOURCE_CMD_LINE][option] + optionCount[SOURCE_FILE][option];
+}
+
+static char *trim(char *text)
+{
+	if (!*text)
+		return text;
+
+	/* Trim leading and trailing whitespace and quote characters: */
+	for (char *ch = text + strlen(text) - 1;
+			isspace((int)*ch) || *ch == '\'' || *ch == '\"'; *ch-- = '\0');
+	for (; isspace((int)*text) || *text == '\'' || *text == '\"'; *text++ = '\0');
+
+	return text;
+}
+
+static int parseKeyValue(const char *key, const char *value, const char *filePath,
+		unsigned lineNo)
+{
+	for (int option = 0; option < OPT_COUNT; ++option)
+	{
+		if (strcmp(key, options[option].name))
+			continue;
+
+		if (options[option].has_arg == required_argument && !value)
+		{
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s requires an argument\n",
+					filePath, lineNo, options[option].name);
+			exit(EXIT_FAILURE);
+		}
+		else if (!options[option].has_arg && value)
+		{
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s does not take an argument\n",
+					filePath, lineNo, options[option].name);
+			exit(EXIT_FAILURE);
+		}
+
+		return option;
+	}
+
+	fprintf(stderr, "Failed to parse \"%s\" at line %u: \"%s\" is not a valid keyword\n",
+			filePath, lineNo, key);
+	exit(EXIT_FAILURE);
+	return -1;
 }

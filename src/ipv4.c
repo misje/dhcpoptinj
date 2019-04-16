@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *

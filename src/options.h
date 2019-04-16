@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015 Andreas Misje
+ * Copyright © 2015–2019 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -35,6 +35,7 @@ struct DHCPOptList *dhcpOpt_createList(void);
 void dhcpOpt_destroyList(struct DHCPOptList *list);
 bool dhcpOpt_optExists(const struct DHCPOptList *list, int code);
 int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t size);
+size_t dhcpOpt_count(struct DHCPOptList *list);
 /* Serialise option list to an array (code + length + payload) */
 int dhcpOpt_serialise(const struct DHCPOptList *list, uint8_t **buffer, size_t *size);
 /* Create an array containg the integer codes of all the DHCP options in the
