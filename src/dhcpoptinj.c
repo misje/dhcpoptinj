@@ -164,9 +164,9 @@ int main(int argc, char *argv[])
 		umask(022);
 		daemonised = true;
 	}
-	writePID();
 
 	initSignalHandler();
+	writePID();
 
 	if (config->debug)
 		logMessage(LOG_DEBUG, "Initialisation completed. Waiting for packets to "
