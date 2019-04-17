@@ -228,7 +228,7 @@ static void printUsage(void)
 	printf(
 			"\n"
          "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
-			"       %*s [-c config_file]\n"
+			"       %*s [-c [config_file]]\n"
 			"       %*s -q queue_num -o dhcp_option [(-o dhcp_option) ...]\n"
 			"       %s -h|-v\n"
 			,
