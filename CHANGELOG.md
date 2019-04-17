@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Added
+- Add example output "screenshot" to README.
+
 ### Changed
 - Create PID file after initialising signal handler.
 
@@ -18,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove old bug reference in README.
 
 ### Fixed
-- Allow optional values to configuration file keywords (corretly support
+- Allow optional values to configuration file keywords (correctly support
   "pid-file" as on the command line).
 
 ## 0.5.0 - 2019-04-09
