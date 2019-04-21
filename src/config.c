@@ -572,8 +572,8 @@ static void validateOptionCombinations(void)
 			{
 				fprintf(stderr, "%s%s can only be %s once\n",
 						source == SOURCE_CMD_LINE ? "Option --" : "Keyword ",
-						source == SOURCE_CMD_LINE ? "passed" : "specified",
-						options[option].name);
+						options[option].name,
+						source == SOURCE_CMD_LINE ? "passed" : "specified");
 				printUsage();
 				exit(EXIT_FAILURE);
 			}
