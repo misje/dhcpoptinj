@@ -633,13 +633,13 @@ static int parseKeyValue(const char *key, const char *value, const char *filePat
 
 		if (options[option].has_arg == required_argument && !value)
 		{
-			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s requires an argument\n",
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: keyword \"%s\" requires an argument\n",
 					filePath, lineNo, options[option].name);
 			exit(EXIT_FAILURE);
 		}
 		else if (!options[option].has_arg && value)
 		{
-			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s does not take an argument\n",
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: keyword \"%s\" does not take an argument\n",
 					filePath, lineNo, options[option].name);
 			exit(EXIT_FAILURE);
 		}

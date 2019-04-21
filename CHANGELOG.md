@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Indicate that configuration file is an optional argument in usage output.
+- Fix error message output when passing option/keyward too many times.
+- Improve wording in configuration file parsing error messages.
 
 ## 0.5.1 - 2019-04-16
 ### Changed
