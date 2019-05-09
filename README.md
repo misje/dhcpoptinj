@@ -75,6 +75,34 @@ nor does it check whether your option code exists. It does however forbid you
 to use the option code 255 (the terminating end option). dhcpoptinj inserts
 this option as the last option automatically.
 
+## Screenshot
+```
+dhcpoptinj -f -d -q42 -r -o'0C 66 6A 61 73 65 68 6F 73 74' -o'52 01 04 46 6A 61 73' -o 320A141E28
+```
+```
+3 DHCP option(s) to inject (with a total of 25 bytes): 12 (0x0C) (Hostname), 82 (0x52) (Relay Agent Information), 50 (0x32) (Address Request)
+Existing options will be removed
+Initialising netfilter queue
+Initialising signal handler
+Initialisation completed. Waiting for packets to mangle on queue 42
+Received 416 bytes
+Inspecting 328-byte DHCP packet from B6:40:FE:41:30:DC to 255.255.255.255:67
+Mangling packet
+Found option  53 (0x35) (DHCP message type)        DHCPREQUEST (copying)
+Found option  54 (0x36) (DHCP Server Id)           with   4-byte payload 0A 14 1E 01 (copying)
+Found option  50 (0x32) (Address Request)          with   4-byte payload 0A 14 1E 28 (removing)
+Found option  12 (0x0C) (Hostname)                 with  12-byte payload 33 31 36 64 65 39 31 34 64 61 62 34 (removing)
+Found option  55 (0x37) (Parameter List)           with  13-byte payload 01 1C 02 03 0F 06 77 0C 2C 2F 1A 79 2A (copying)
+Found END option (removing)
+Injecting option  12 (0x0C) (Hostname)                 with   9-byte payload 66 6A 61 73 65 68 6F 73 74
+Injecting option  82 (0x52) (Relay Agent Information)  with   6-byte payload 01 04 46 6A 61 73
+Injecting option  50 (0x32) (Address Request)          with   4-byte payload 0A 14 1E 28
+Inserting END option
+Padding with 10 byte(s) to meet minimal BOOTP payload size
+Sending mangled packet
+
+```
+
 ## Installing
 
 dhcpoptinj is submitted to Debian and will hopefully make it to unstable (and
@@ -129,7 +157,7 @@ The options *version*, *help* and *conf-file* are not accepted in a
 configuration file.
 
 Example:
-```conf
+```apache
 # Run in foreground:
 foreground
 # Enable debug output:

@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.0)
 # Allow setting PROJECT_VERSION through project():
 cmake_policy(SET CMP0048 NEW)
 
+# Don't bother writing the project name all the time:
+set(PROJECT dhcpoptinj)
+
 if(DEFINED CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of build, Debug or Release")
 else()
@@ -13,7 +16,12 @@ else()
 	set(CMAKE_INSTALL_PREFIX /usr CACHE STRING "Choose install prefix")
 endif()
 
-project(dhcpoptinj LANGUAGES C VERSION 0.5.1)
+project(
+	${PROJECT}
+	VERSION 0.5.2
+	DESCRIPTION "DHCP option injector"
+	LANGUAGES C
+	)
 add_definitions(-DDHCPOPTINJ_VERSION="${PROJECT_VERSION}")
 set(SOURCES
 	src/config.c
@@ -29,9 +37,9 @@ set(HEADERS
 	src/options.h
 	src/udp.h
 	)
-add_executable(dhcpoptinj ${SOURCES} ${HEADERS})
-set_property(TARGET dhcpoptinj PROPERTY C_STANDARD 99)
-target_compile_options(dhcpoptinj PRIVATE
+add_executable(${PROJECT} ${SOURCES} ${HEADERS})
+set_property(TARGET ${PROJECT} PROPERTY C_STANDARD 99)
+target_compile_options(${PROJECT} PRIVATE
 	-Wall
 	-Wextra
 	-pedantic
@@ -40,7 +48,6 @@ target_compile_options(dhcpoptinj PRIVATE
 	-Wdisabled-optimization
 	-Wformat=2
 	-Winit-self
-	-Wlogical-op
 	-Wmissing-declarations
 	-Wmissing-include-dirs
 	-Wredundant-decls
@@ -62,10 +69,15 @@ target_compile_options(dhcpoptinj PRIVATE
 	-D_DEFAULT_SOURCE
 	-D_FORTIFY_SOURCE=2
 	)
+# Only add -Wlogical-op if using gcc; clang does not support this warning option:
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(${PROJECT} PRIVATE "-Wlogical-op")
+endif()
  
 find_library(NFQ_LIB netfilter_queue REQUIRED)
-target_link_libraries(dhcpoptinj ${NFQ_LIB})
-install(TARGETS dhcpoptinj DESTINATION sbin)
+target_link_libraries(${PROJECT} ${NFQ_LIB})
+
+install(TARGETS ${PROJECT} DESTINATION sbin)
 # Add uninstall target, since cmake does not:
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"

@@ -228,7 +228,7 @@ static void printUsage(void)
 	printf(
 			"\n"
          "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
-			"       %*s [-c config_file]\n"
+			"       %*s [-c [config_file]]\n"
 			"       %*s -q queue_num -o dhcp_option [(-o dhcp_option) ...]\n"
 			"       %s -h|-v\n"
 			,
@@ -572,8 +572,8 @@ static void validateOptionCombinations(void)
 			{
 				fprintf(stderr, "%s%s can only be %s once\n",
 						source == SOURCE_CMD_LINE ? "Option --" : "Keyword ",
-						source == SOURCE_CMD_LINE ? "passed" : "specified",
-						options[option].name);
+						options[option].name,
+						source == SOURCE_CMD_LINE ? "passed" : "specified");
 				printUsage();
 				exit(EXIT_FAILURE);
 			}
@@ -633,13 +633,13 @@ static int parseKeyValue(const char *key, const char *value, const char *filePat
 
 		if (options[option].has_arg == required_argument && !value)
 		{
-			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s requires an argument\n",
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: keyword \"%s\" requires an argument\n",
 					filePath, lineNo, options[option].name);
 			exit(EXIT_FAILURE);
 		}
 		else if (!options[option].has_arg && value)
 		{
-			fprintf(stderr, "Failed to parse \"%s\" at line %u: %s does not take an argument\n",
+			fprintf(stderr, "Failed to parse \"%s\" at line %u: keyword \"%s\" does not take an argument\n",
 					filePath, lineNo, options[option].name);
 			exit(EXIT_FAILURE);
 		}

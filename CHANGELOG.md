@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.2 - 2019-05-09
+### Added
+- Add example output "screenshot" to README.
+
+### Changed
+- Create PID file after initialising signal handler.
+- Remove incompatible compiler warning option when using clang.
+- Use a variable for the project/binary name in CMakeLists.txt.
+
+### Fixed
+- Indicate that configuration file is an optional argument in usage output.
+- Fix error message output when passing option/keyward too many times.
+- Improve wording in configuration file parsing error messages.
+
 ## 0.5.1 - 2019-04-16
 ### Changed
 - Use 1-byte alignment on DHCP options.
@@ -13,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove old bug reference in README.
 
 ### Fixed
-- Allow optional values to configuration file keywords (corretly support
+- Allow optional values to configuration file keywords (correctly support
   "pid-file" as on the command line).
 
 ## 0.5.0 - 2019-04-09
