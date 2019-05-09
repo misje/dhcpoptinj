@@ -40,7 +40,6 @@ target_compile_options(dhcpoptinj PRIVATE
 	-Wdisabled-optimization
 	-Wformat=2
 	-Winit-self
-	-Wlogical-op
 	-Wmissing-declarations
 	-Wmissing-include-dirs
 	-Wredundant-decls
@@ -62,6 +61,10 @@ target_compile_options(dhcpoptinj PRIVATE
 	-D_DEFAULT_SOURCE
 	-D_FORTIFY_SOURCE=2
 	)
+# Only add -Wlogical-op if using gcc; clang does not support this warning option:
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(dhcpoptinj PRIVATE "-Wlogical-op")
+endif()
  
 find_library(NFQ_LIB netfilter_queue REQUIRED)
 target_link_libraries(dhcpoptinj ${NFQ_LIB})
