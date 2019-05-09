@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Create PID file after initialising signal handler.
 - Remove incompatible compiler warning option when using clang.
+- Use a variable for the project/binary name in CMakeLists.txt.
 
 ### Fixed
 - Indicate that configuration file is an optional argument in usage output.
