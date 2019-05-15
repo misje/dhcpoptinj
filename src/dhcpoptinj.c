@@ -586,7 +586,7 @@ static void debugLogOptions(void)
 	if (!config->debug)
 		return;
 
-	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (with a total of %zu bytes): ",
+	logMessage(LOG_DEBUG, "%zu DHCP option(s) to inject (with a total of %zu bytes): ",
 			config->dhcpOptCodeCount, config->dhcpOptsSize);
 
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
@@ -673,7 +673,7 @@ static void debugLogOption(const char *action, const struct DHCPOption *option)
 			option->code,
 			option->code,
 			optName,
-			optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
+			(int)(optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen),
 			"",
 			option->length,
 			optPayload);
