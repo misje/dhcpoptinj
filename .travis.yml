@@ -3,6 +3,7 @@ addons:
       update: true
       packages:
          - libnetfilter-queue-dev
+dist: xenial
 language: c
 compiler:
    - clang
