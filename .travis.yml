@@ -1,0 +1,15 @@
+addons:
+   apt:
+      update: true
+      packages:
+         - libnetfilter-queue-dev
+language: c
+compiler:
+   - clang
+   - gcc
+before_script:
+   - mkdir build
+script:
+   - cd build
+   - cmake ..
+   - make -j2
