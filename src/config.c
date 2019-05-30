@@ -529,6 +529,7 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 					fputs("Could not allocate space for PID file name\n", stderr);
 					exit(EXIT_FAILURE);
 				}
+				// NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
 				strcpy(config->pidFile, src);
 			}
 			break;

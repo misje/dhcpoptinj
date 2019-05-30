@@ -500,6 +500,7 @@ static void logMessage(int priority, const char *format, ...)
 		if (priority == LOG_NOTICE || priority == LOG_INFO || priority == LOG_DEBUG)
 			f = stdout;
 		
+		/* NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized) */
 		vfprintf(f, format, args1);
 	}
 	va_end(args1);
