@@ -654,9 +654,9 @@ static void debugLogOptionFound(const struct DHCPOption *option)
 
 static void debugLogOption(const char *action, const struct DHCPOption *option)
 {
-	/* String buffer for hex string (maximum DHCP option length (256) times
+	/* String buffer for hex string (maximum DHCP option length (255) times
 	 * three characters (two digits and a space)) */
-	char optPayload[256 * 3];
+	char optPayload[UINT8_MAX * 3];
 	size_t i = 0;
 	for (; i < option->length; ++i)
 		sprintf(optPayload + 3*i, "%02X ", option->data[i]);

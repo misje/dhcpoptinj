@@ -28,7 +28,7 @@ struct DHCPOpt
 {
 	uint8_t code;
 	uint8_t length;
-	uint8_t data[256];
+	uint8_t data[UINT8_MAX];
 };
 
 struct DHCPOptList
