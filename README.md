@@ -1,4 +1,5 @@
 # DHCP option injector
+[![Build Status](https://travis-ci.org/misje/dhcpoptinj.svg?branch=dev)](https://travis-ci.org/misje/dhcpoptinj) [![Total alerts](https://img.shields.io/lgtm/alerts/g/misje/dhcpoptinj.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/misje/dhcpoptinj/alerts/)
 
 Have you ever wanted to intercept DHCP requests and squeeze in a few extra DHCP
 options, unbeknownst to the sender? Probably not. However, should the need ever
@@ -104,13 +105,13 @@ Sending mangled packet
 ```
 
 ## Installing
+[![Packaging status](https://repology.org/badge/vertical-allrepos/dhcpoptinj.svg)](https://repology.org/project/dhcpoptinj/versions)
 
-dhcpoptinj is submitted to Debian and will hopefully make it to unstable (and
-consequently testing and stable) in not too long. The deb package is under
-source control at [salsa](https://salsa.debian.org/misje-guest/dhcpoptinj).
-Installing dhcpoptinj from the deb package is recommended over the following
-manual installation procedure, because it also includes a man page, bash
-completion rules, example files etc. 
+dhcpoptinj is in Debian/Ubuntu. The deb package is under source control at
+[salsa](https://salsa.debian.org/misje-guest/dhcpoptinj). Installing
+dhcpoptinj from the deb package is recommended over the following manual
+installation procedure, because it also includes a man page, bash completion
+rules, example files etc. 
 
 ### Prerequisites
 
