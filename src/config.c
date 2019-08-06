@@ -317,7 +317,7 @@ static void printHelp(void)
 			"The option hex string is written as a series of two-digit pairs,\n"
 			"optionally delimited by one or more non-hexadecimal characters:\n"
 			"'466A6173','46 6A 61 73', '46:6A:61:73' etc. There is a maximum limit\n"
-			"of 256 bytes per option, excluding the option code (the first byte)\n"
+			"of 255 bytes per option, excluding the option code (the first byte)\n"
 			"and the automatically inserted length byte. At least one option must\n"
 			"be provided.\n"
 			"\n"
@@ -371,8 +371,8 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 	if (!string)
 		return;
 
-	/* Make room for length byte and payload */
-	uint8_t buffer[1 + 256];
+	/* Make room for option code byte and payload */
+	uint8_t buffer[1 + UINT8_MAX];
 	size_t length = 0;
 	for (size_t i = 0; i < strlen(string) && length < sizeof(buffer);)
 	{
@@ -384,8 +384,15 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 		else
 			++i;
 	}
+	/* Will not happen; the cmd.line parsing code expects an argument: */
 	if (!length)
 		return;
+	if (length > UINT8_MAX)
+	{
+		fprintf(stderr, "DHCP option size exceeds the limit of %u bytes\n",
+				UINT8_MAX);
+		exit(EXIT_FAILURE);
+	}
 
 	uint16_t optCode = buffer[0];
 
@@ -522,6 +529,7 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 					fputs("Could not allocate space for PID file name\n", stderr);
 					exit(EXIT_FAILURE);
 				}
+				// NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
 				strcpy(config->pidFile, src);
 			}
 			break;

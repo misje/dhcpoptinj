@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.3 - 2019-08-06
+### Fixed
+- Fix two format arguments in debug output printing (fairly pedantic; not even
+  caught by clang analyser).
+- Limit DHCP options to 255 bytes (not 256).
+- Exit if a DHCP option is too long.
+
 ## 0.5.2 - 2019-05-09
 ### Added
 - Add example output "screenshot" to README.

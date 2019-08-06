@@ -500,6 +500,7 @@ static void logMessage(int priority, const char *format, ...)
 		if (priority == LOG_NOTICE || priority == LOG_INFO || priority == LOG_DEBUG)
 			f = stdout;
 		
+		/* NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized) */
 		vfprintf(f, format, args1);
 	}
 	va_end(args1);
@@ -586,7 +587,7 @@ static void debugLogOptions(void)
 	if (!config->debug)
 		return;
 
-	logMessage(LOG_DEBUG, "%u DHCP option(s) to inject (with a total of %zu bytes): ",
+	logMessage(LOG_DEBUG, "%zu DHCP option(s) to inject (with a total of %zu bytes): ",
 			config->dhcpOptCodeCount, config->dhcpOptsSize);
 
 	for (size_t i = 0; i < config->dhcpOptCodeCount; ++i)
@@ -654,9 +655,9 @@ static void debugLogOptionFound(const struct DHCPOption *option)
 
 static void debugLogOption(const char *action, const struct DHCPOption *option)
 {
-	/* String buffer for hex string (maximum DHCP option length (256) times
+	/* String buffer for hex string (maximum DHCP option length (255) times
 	 * three characters (two digits and a space)) */
-	char optPayload[256 * 3];
+	char optPayload[UINT8_MAX * 3];
 	size_t i = 0;
 	for (; i < option->length; ++i)
 		sprintf(optPayload + 3*i, "%02X ", option->data[i]);
@@ -673,7 +674,7 @@ static void debugLogOption(const char *action, const struct DHCPOption *option)
 			option->code,
 			option->code,
 			optName,
-			optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen,
+			(int)(optNameLen > alignedWidth ? 0 : alignedWidth - optNameLen),
 			"",
 			option->length,
 			optPayload);
