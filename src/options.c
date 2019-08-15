@@ -60,15 +60,6 @@ void dhcpOpt_destroyList(struct DHCPOptList *list)
 	free(list);
 }
 
-bool dhcpOpt_optExists(const struct DHCPOptList *list, int code)
-{
-	for (size_t i = 0; i < list->count; ++i)
-		if (code == list->options[i].code)
-			return true;
-
-	return false;
-}
-
 int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t size)
 {
 	if (resizeList(list))

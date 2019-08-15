@@ -389,7 +389,7 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 		return;
 	if (length > UINT8_MAX)
 	{
-		fprintf(stderr, "DHCP option size exceeds the limit of %u bytes\n",
+		fprintf(stderr, "DHCP option size exceeds the limit of %d bytes\n",
 				UINT8_MAX);
 		exit(EXIT_FAILURE);
 	}
@@ -541,7 +541,9 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 		case OPT_QUEUE:
 			if (!arg || parseQueueNum(arg, &config->queue))
 			{
-				fprintf(stderr, "Invalid queue number: %s\n", arg);
+				/* arg should never be null unless the option defenitions passed
+				 * to getopt_long is incorrect: */
+				fprintf(stderr, "Invalid queue number: %s\n", arg ? arg : "(null)");
 				printUsage();
 				exit(EXIT_FAILURE);
 			}
