@@ -541,7 +541,9 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 		case OPT_QUEUE:
 			if (!arg || parseQueueNum(arg, &config->queue))
 			{
-				fprintf(stderr, "Invalid queue number: %s\n", arg);
+				/* arg should never be null unless the option defenitions passed
+				 * to getopt_long is incorrect: */
+				fprintf(stderr, "Invalid queue number: %s\n", arg ? arg : "(null)");
 				printUsage();
 				exit(EXIT_FAILURE);
 			}
