@@ -42,9 +42,9 @@ uint16_t ipv4_checksum(const struct IPv4Header *ipv4Header)
 	return ~checksum;
 }
 
-size_t ipv4_headerLen(const struct IPv4Header *ipHeader)
+size_t ipv4_headerLen(const struct IPv4Header *ipv4Header)
 {
-	return (ipHeader->verIHL & 0xf) * 4U;
+	return (ipv4Header->verIHL & 0xf) * 4U;
 }
 
 bool ipv4_packetFragmented(const struct IPv4Header *ipHeader)
