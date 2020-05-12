@@ -394,7 +394,7 @@ static void addDHCPOption(struct DHCPOptList *list, const char *string)
 		return;
 	if (length > UINT8_MAX)
 	{
-		fprintf(stderr, "DHCP option size exceeds the limit of %d bytes\n",
+		fprintf(stderr, "DHCP option size exceeds the limit of %u bytes\n",
 				UINT8_MAX);
 		exit(EXIT_FAILURE);
 	}
