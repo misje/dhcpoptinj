@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright © 2015–2020 Andreas Misje
  *
  * This file is part of dhcpoptinj.
@@ -6,7 +6,7 @@
  * dhcpoptinj is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
  * Software Foundation, either version 3 of the License, or (at your option)
- * any later version.  
+ * any later version.
  *
  * dhcpoptinj is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -32,9 +32,9 @@
 struct DHCPOptList;
 
 struct DHCPOptList *dhcpOpt_createList(void);
-void dhcpOpt_destroyList(struct DHCPOptList *list);
-int dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t size);
-size_t dhcpOpt_count(struct DHCPOptList *list);
+void                dhcpOpt_destroyList(struct DHCPOptList *list);
+int                 dhcpOpt_add(struct DHCPOptList *list, int code, const void *data, size_t size);
+size_t              dhcpOpt_count(struct DHCPOptList *list);
 /* Serialise option list to an array (code + length + payload) */
 int dhcpOpt_serialise(const struct DHCPOptList *list, uint8_t **buffer, size_t *size);
 /* Create an array containg the integer codes of all the DHCP options in the
