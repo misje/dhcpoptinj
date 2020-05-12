@@ -154,7 +154,7 @@ considered a comment. DHCP options are listed one-by-one as *option=01:02:03*.
 Quotes around the option hex string is optional, and the bytes may be separated
 by any number of non-hexadecimal characters.
 
-The options *version*, *help* and *conf-file* are not accepted in a
+The options "options", *version*, *help* and *conf-file* are not accepted in a
 configuration file.
 
 Example:

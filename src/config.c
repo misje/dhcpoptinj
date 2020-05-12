@@ -55,6 +55,7 @@ enum ConfFileParseOption
  * character: */
 enum LongOnlyOpt {
 	ForwardOnFail             = 1000,
+	ListOptions               = 1001,
 };
 
 /* Option definitions used to index options[] and optionCount[]: */
@@ -71,6 +72,7 @@ enum Option
 	OPT_QUEUE,
 	OPT_REMOVE_EXISTING_OPT,
 	OPT_VERSION,
+	OPT_LIST_OPTS,
 
 	OPT_COUNT,
 };
@@ -94,6 +96,7 @@ static const struct option options[] =
 	[OPT_QUEUE]               = { "queue",               required_argument, NULL, 'q' },
 	[OPT_REMOVE_EXISTING_OPT] = { "remove-existing-opt", no_argument,       NULL, 'r' },
 	[OPT_VERSION]             = { "version",             no_argument,       NULL, 'v' },
+	[OPT_LIST_OPTS]           = { "options",             optional_argument, NULL, ListOptions },
 	[OPT_COUNT]               = {0},
 };
 /* Count the number of times arguments have been passed on the command line
@@ -117,6 +120,7 @@ static unsigned int totalOptionCount(int option);
 static char *trim(char *text);
 static int parseKeyValue(const char *key, const char *value, const char *filePath,
 		unsigned lineNo);
+static bool validConfOption(int option);
 
 
 struct Config *conf_parseOpts(int argc, char * const *argv)
@@ -230,7 +234,7 @@ static void printUsage(void)
          "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
 			"       %*s [-c [config_file]]\n"
 			"       %*s -q queue_num -o dhcp_option [(-o dhcp_option) ...]\n"
-			"       %s -h|-v\n"
+			"       %s -h|-v|--options\n"
 			,
 			programName,
 			progNameLen, "",
@@ -281,6 +285,7 @@ static void printHelp(void)
 			"                             code. The option length field is automatically\n"
 			"                             calculated and must be omitted. Several\n"
 			"                             options may be injected\n"
+			"      --options              Print a list of all DHCP options\n"
 			"  -p, --pid-file [file]      Write PID to file, using specified path\n"
 			"                             or a default sensible location\n"
 			"  -q, --queue queue_num      Netfilter queue number to use\n"
@@ -471,6 +476,12 @@ static void parseConfFile(struct Config *config, const char *filePath, int parse
 
 static void parseOption(struct Config *config, int option, char *arg, enum Source source)
 {
+	if (source == SOURCE_FILE && !validConfOption(option))
+	{
+		fprintf(stderr, "The keyword \"%s\" doesn't make sense in a configuration "
+				"file\n", options[option].name);
+		exit(EXIT_FAILURE);
+	}
 	/* Do not override command line options from configuration file: */
 	if (source == SOURCE_FILE && optionCount[SOURCE_CMD_LINE][option])
 		return;
@@ -500,12 +511,6 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 			break;
 
 		case OPT_HELP:
-			if (source == SOURCE_FILE)
-			{
-				fprintf(stderr, "The option \"%s\" doesn't make sense in a configuration "
-						"file\n", options[option].name);
-				exit(EXIT_FAILURE);
-			}
 			printHelp();
 			dhcpOpt_destroyList(cmdDHCPOptList);
 			dhcpOpt_destroyList(fileDHCPOptList);
@@ -554,13 +559,17 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 			break;
 
 		case OPT_VERSION:
-			if (source == SOURCE_FILE)
-			{
-				fprintf(stderr, "The option \"%s\" doesn't make sense in a configuration "
-						"file\n", options[option].name);
-				exit(EXIT_FAILURE);
-			}
 			printVersion();
+			dhcpOpt_destroyList(cmdDHCPOptList);
+			dhcpOpt_destroyList(fileDHCPOptList);
+			conf_destroy(config);
+			exit(EXIT_SUCCESS);
+			break;
+
+		case OPT_LIST_OPTS:
+			for (uint16_t i = 0; i <= UINT8_MAX; ++i)
+				printf("%3d, 0x%02X: %s\n", i, i, dhcp_optionString(i));
+
 			dhcpOpt_destroyList(cmdDHCPOptList);
 			dhcpOpt_destroyList(fileDHCPOptList);
 			conf_destroy(config);
@@ -661,4 +670,14 @@ static int parseKeyValue(const char *key, const char *value, const char *filePat
 			filePath, lineNo, key);
 	exit(EXIT_FAILURE);
 	return -1;
+}
+
+static bool validConfOption(int option)
+{
+	return !(
+			option == OPT_CONF_FILE ||
+			option == OPT_HELP ||
+			option == OPT_VERSION ||
+			option == OPT_LIST_OPTS
+			);
 }
