@@ -65,13 +65,20 @@ target_compile_options(${PROJECT} PRIVATE
 	-fstack-protector
 	-Wwrite-strings
 	-Wmissing-field-initializers
+	-Wswitch-enum
+	-Waddress
+	-Wnull-dereference
 	-D_POSIX_SOURCE
 	-D_DEFAULT_SOURCE
 	-D_FORTIFY_SOURCE=2
 	)
 # Only add -Wlogical-op if using gcc; clang does not support this warning option:
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT} PRIVATE "-Wlogical-op")
+	target_compile_options(${PROJECT} PRIVATE
+		-Wlogical-op
+		-Wduplicated-cond
+		-Wduplicated-branches
+		)
 endif()
  
 find_library(NFQ_LIB netfilter_queue REQUIRED)
