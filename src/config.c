@@ -1,5 +1,5 @@
 /* 
- * Copyright © 2015–2019 Andreas Misje
+ * Copyright © 2015–2020 Andreas Misje
  *
  * This file is part of dhcpoptinj.
  *
@@ -350,7 +350,7 @@ static void printVersion(void)
 {
 	printf(
 			"%s - DHCP option injector, version %s\n"
-			"Copyright (C) 2015-2019 by Andreas Misje\n"
+			"Copyright (C) 2015-2020 by Andreas Misje\n"
 			"\n"
 			"%s comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 			"and you are welcome to redistribute it under certain conditions. See\n"
