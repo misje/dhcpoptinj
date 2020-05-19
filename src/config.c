@@ -560,7 +560,7 @@ static void parseOption(struct Config *config, int option, char *arg, enum Sourc
 
    case OPT_LIST_OPTS:
       for (uint16_t i = 0; i <= UINT8_MAX; ++i)
-         printf("%3d, 0x%02X: %s\n", i, i, dhcp_optionString(i));
+         printf("%3d (0x%02X): %s\n", i, i, dhcp_optionString(i));
 
       dhcpOpt_destroyList(cmdDHCPOptList);
       dhcpOpt_destroyList(fileDHCPOptList);
