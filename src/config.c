@@ -95,7 +95,7 @@ static const struct option options[] = {
     [OPT_QUEUE]               = {"queue", required_argument, NULL, 'q'},
     [OPT_REMOVE_EXISTING_OPT] = {"remove-existing-opt", no_argument, NULL, 'r'},
     [OPT_VERSION]             = {"version", no_argument, NULL, 'v'},
-    [OPT_LIST_OPTS]           = {"options", optional_argument, NULL, ListOptions},
+    [OPT_LIST_OPTS]           = {"list-options", optional_argument, NULL, ListOptions},
     [OPT_COUNT]               = {0},
 };
 /* Count the number of times arguments have been passed on the command line
@@ -229,7 +229,7 @@ static void printUsage(void)
        "Usage: %s [-df] [--forward-on-fail] [-i|-r] [-p [pid_file]] \n"
        "       %*s [-c [config_file]]\n"
        "       %*s -q queue_num -o dhcp_option [(-o dhcp_option) ...]\n"
-       "       %s -h|-v|--options\n",
+       "       %s -h|-v|--list-options\n",
        programName,
        progNameLen,
        "",
@@ -275,12 +275,12 @@ static void printHelp(void)
        "                             in the original packet. Unless\n"
        "                             --remove-existing-opt is provided, the\n"
        "                             default behaviour is to drop the packet\n"
+       "      --list-options         Print a list of all DHCP options\n"
        "  -o, --option dhcp_option   DHCP option to inject as a hex string,\n"
        "                             where the first byte indicates the option\n"
        "                             code. The option length field is automatically\n"
        "                             calculated and must be omitted. Several\n"
        "                             options may be injected\n"
-       "      --options              Print a list of all DHCP options\n"
        "  -p, --pid-file [file]      Write PID to file, using specified path\n"
        "                             or a default sensible location\n"
        "  -q, --queue queue_num      Netfilter queue number to use\n"
